@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f8f6f1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="TRIA Oro">
+<title>TRIA Capital · Reporte Oro</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;background:#f8f6f1;color:#1a1a1a;overflow-x:hidden}
+.mono{font-family:"SF Mono",Menlo,Consolas,monospace}
+.container{max-width:480px;margin:0 auto;min-height:100vh;background:#fff;position:relative}
+
+/* LOGIN */
+.login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:linear-gradient(180deg,#f8f6f1 0%,#fff 100%)}
+.login-logo{font-size:0.625rem;text-transform:uppercase;letter-spacing:0.3em;color:#a3916e;margin-bottom:0.5rem}
+.login-title{font-size:1.5rem;font-weight:700;color:#1a1a1a;margin-bottom:2.5rem}
+.login-title span{color:#a3916e}
+.login-box{width:100%;max-width:320px}
+.login-field{margin-bottom:1.25rem}
+.login-label{font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c8c;margin-bottom:0.5rem;display:block}
+.login-select,.login-input{width:100%;padding:0.875rem 1rem;border:1.5px solid #e5e0d8;border-radius:0.75rem;font-size:1rem;background:#fff;color:#1a1a1a;font-family:inherit;-webkit-appearance:none;appearance:none}
+.login-select{background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%238c8c8c' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 1rem center;padding-right:2.5rem}
+.login-input{text-align:center;font-family:"SF Mono",monospace;font-size:1.5rem;letter-spacing:1rem;padding-left:1.5rem}
+.login-select:focus,.login-input:focus{outline:none;border-color:#a3916e;box-shadow:0 0 0 3px rgba(163,145,110,0.15)}
+.login-btn{width:100%;padding:1rem;border:none;border-radius:0.75rem;background:#a3916e;color:#fff;font-size:0.9375rem;font-weight:600;cursor:pointer;margin-top:0.5rem;transition:background 0.2s}
+.login-btn:hover{background:#8c7b5e}
+.login-btn:active{background:#7a6b51}
+.login-btn:disabled{background:#d4cfc7;cursor:not-allowed}
+.login-error{color:#c0392b;font-size:0.8125rem;text-align:center;margin-top:1rem;min-height:1.25rem}
+
+/* HEADER */
+.header{padding:1.25rem 1.25rem 1rem;border-bottom:1.5px solid #ece8e1;display:flex;justify-content:space-between;align-items:center;background:#fff;position:sticky;top:0;z-index:10}
+.header-left h1{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.25em;color:#a3916e}
+.header-left .title{font-size:1.0625rem;font-weight:700;color:#1a1a1a;margin-top:0.125rem}
+.header-right{text-align:right}
+.header-right p{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c8c}
+.header-user{font-size:0.8125rem;font-weight:600;color:#1a1a1a;margin-top:0.125rem}
+.header-badge{display:inline-block;font-size:0.5625rem;background:#a3916e;color:#fff;padding:0.125rem 0.375rem;border-radius:0.25rem;margin-left:0.25rem;vertical-align:middle}
+.logout-btn{background:none;border:none;font-size:0.75rem;color:#8c8c8c;cursor:pointer;margin-top:0.25rem;text-decoration:underline}
+
+/* CONTENT */
+.content{padding:1.25rem;padding-bottom:7rem}
+.tab-content{display:none}.tab-content.active{display:block}
+.section{margin-bottom:1.5rem}
+.section-label{font-size:0.625rem;text-transform:uppercase;letter-spacing:0.2em;color:#a3916e;margin-bottom:0.75rem;font-weight:600}
+
+/* CARD */
+.card{border:1.5px solid #ece8e1;border-radius:1rem;background:#fff;overflow:hidden}
+.card-header{padding:0.875rem 1rem;border-bottom:1px solid #ece8e1;display:flex;justify-content:space-between;align-items:center}
+.card-header-label{font-size:0.625rem;text-transform:uppercase;letter-spacing:0.15em;color:#8c8c8c}
+.card-row{display:flex;justify-content:space-between;align-items:center;padding:0.6875rem 1rem;border-bottom:1px solid #f0ece6}
+.card-row:last-child{border-bottom:none}
+.card-row-label{font-size:0.75rem;color:#666}
+.card-row-value{font-family:"SF Mono",monospace;font-size:0.8125rem;color:#1a1a1a;font-weight:500}
+.card-row-sub{font-size:0.5625rem;color:#a3a3a3;font-family:"SF Mono",monospace;margin-top:0.125rem}
+
+/* HIGHLIGHT ROWS */
+.row-accent .card-row-label,.row-accent .card-row-value{color:#a3916e;font-weight:600}
+.row-bold .card-row-value{font-weight:700;font-size:0.875rem}
+
+/* FIELDS */
+.field{margin-bottom:1rem}
+.field-label{font-size:0.625rem;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c8c;margin-bottom:0.375rem;font-weight:500}
+input,select,textarea{width:100%;background:#faf9f6;border:1.5px solid #e5e0d8;border-radius:0.625rem;padding:0.75rem;font-size:0.875rem;color:#1a1a1a;font-family:inherit;transition:border 0.2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#a3916e;box-shadow:0 0 0 3px rgba(163,145,110,0.1)}
+input[type="number"],input[type="time"],input[type="date"]{font-family:"SF Mono",monospace}
+textarea{resize:vertical;min-height:56px}
+.input-hint{font-size:0.625rem;color:#8c8c8c;margin-top:0.25rem;font-family:"SF Mono",monospace}
+select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%238c8c8c' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.75rem center;padding-right:2rem}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem}
+
+/* PRICE PANEL */
+.price-grid{display:grid;grid-template-columns:1fr 1fr}
+.price-cell{padding:0.875rem 1rem;border-right:1px solid #ece8e1}
+.price-cell:last-child{border-right:none}
+.price-cell-label{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c8c;font-weight:500}
+.price-cell-sub{font-size:0.5625rem;color:#b3b3b3}
+.price-cell-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.5rem}
+.price-value{font-size:0.9375rem;font-family:"SF Mono",monospace;font-weight:600;color:#1a1a1a}
+.edit-btn{background:none;border:none;color:#b3b3b3;cursor:pointer;padding:0.125rem;font-size:0.75rem}
+.edit-btn:hover{color:#a3916e}
+.price-edit{display:none;margin-top:0.375rem}
+.price-edit.active{display:flex;gap:0.25rem;align-items:center}
+.price-edit input{padding:0.375rem 0.5rem;font-size:0.75rem;border-color:#a3916e;flex:1}
+.price-edit button{background:none;border:none;cursor:pointer;font-size:0.875rem;padding:0.25rem}
+.refresh-btn{background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:0.375rem;font-size:0.6875rem;color:#8c8c8c;padding:0.25rem 0.5rem;border-radius:0.375rem}
+.refresh-btn:hover{background:#f0ece6;color:#1a1a1a}
+
+/* RESULT BOX */
+.result-box{border-radius:1rem;padding:1.25rem;margin:1rem 0;border:1.5px solid #c8e6c9;background:#f1f8e9}
+.result-box.negative{border-color:#ffcdd2;background:#ffebee}
+.result-label{font-size:0.625rem;text-transform:uppercase;letter-spacing:0.2em;color:#666;margin-bottom:0.5rem;font-weight:600}
+.result-value{font-size:1.75rem;font-family:"SF Mono",monospace;font-weight:700;color:#2e7d32;letter-spacing:-0.03em}
+.result-box.negative .result-value{color:#c62828}
+.split-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1rem}
+.split-card{border-radius:0.75rem;padding:0.875rem;border:1.5px solid #ece8e1;background:#faf9f6}
+.split-card-label{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c8c;margin-bottom:0.25rem;font-weight:500}
+.split-card-value{font-size:0.875rem;font-family:"SF Mono",monospace;font-weight:700;color:#1a1a1a}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.9375rem;border-radius:0.875rem;font-size:0.875rem;font-weight:600;border:none;cursor:pointer;width:100%;transition:all 0.2s}
+.btn-primary{background:#a3916e;color:#fff}
+.btn-primary:hover{background:#8c7b5e}
+.btn-primary:active{background:#7a6b51}
+.btn-primary:disabled{background:#d4cfc7;color:#fff;cursor:not-allowed}
+.btn-secondary{background:#fff;color:#a3916e;border:1.5px solid #e5e0d8}
+.btn-secondary:hover{background:#faf9f6}
+.btn-danger{background:#fff;color:#c0392b;border:1.5px solid #f5c6cb}
+.btn-danger:hover{background:#fff5f5}
+.btn-small{padding:0.5rem 0.875rem;font-size:0.75rem;width:auto;border-radius:0.5rem}
+
+/* HISTORY */
+.history-item{border:1.5px solid #ece8e1;border-radius:0.875rem;background:#fff;padding:1rem;margin-bottom:0.625rem;cursor:pointer;transition:all 0.2s}
+.history-item:hover{border-color:#d4cfc7;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.history-item:active{background:#faf9f6}
+.history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.625rem}
+.history-badges{display:flex;gap:0.375rem;align-items:center}
+.badge{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.05em;padding:0.1875rem 0.5rem;background:#f0ece6;color:#a3916e;border-radius:0.25rem;font-weight:600}
+.badge-date{font-size:0.625rem;color:#8c8c8c}
+.history-body{display:flex;justify-content:space-between;align-items:flex-end}
+.history-grams{font-size:0.875rem;font-family:"SF Mono",monospace;color:#1a1a1a;font-weight:500}
+.history-prov{font-size:0.625rem;color:#8c8c8c;margin-top:0.25rem}
+.history-profit{font-size:0.875rem;font-family:"SF Mono",monospace;font-weight:700;text-align:right}
+.history-profit-label{font-size:0.5625rem;color:#8c8c8c;font-weight:400}
+.profit-pos{color:#2e7d32}.profit-neg{color:#c62828}
+
+/* TOTALS */
+.total-card{border:1.5px solid #ece8e1;border-radius:0.75rem;background:#faf9f6;padding:0.875rem;text-align:center}
+.total-label{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.1em;color:#8c8c8c;margin-bottom:0.25rem;font-weight:500}
+.total-value{font-size:1.125rem;font-family:"SF Mono",monospace;font-weight:700;color:#1a1a1a}
+.total-value.green{color:#2e7d32}
+
+/* MODAL */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);display:none;align-items:flex-end;z-index:40}
+.modal.active{display:flex}
+.modal-content{width:100%;max-width:480px;margin:0 auto;background:#fff;border-radius:1.25rem 1.25rem 0 0;max-height:90vh;overflow-y:auto}
+.modal-header{position:sticky;top:0;padding:1.25rem;border-bottom:1px solid #ece8e1;background:#fff;display:flex;justify-content:space-between;align-items:flex-start;border-radius:1.25rem 1.25rem 0 0}
+.modal-title-small{font-size:0.625rem;text-transform:uppercase;letter-spacing:0.1em;color:#a3916e;font-weight:600}
+.modal-title{font-size:1rem;font-family:"SF Mono",monospace;font-weight:700;margin-top:0.25rem}
+.close-btn{background:none;border:none;font-size:1.25rem;color:#8c8c8c;cursor:pointer;padding:0.25rem}
+.modal-body{padding:1.25rem}
+
+/* TAB BAR */
+.tab-bar{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;border-top:1.5px solid #ece8e1;background:rgba(255,255,255,0.95);backdrop-filter:blur(8px);display:grid;z-index:20}
+.tab-bar.tabs-3{grid-template-columns:1fr 1fr 1fr}
+.tab-bar.tabs-4{grid-template-columns:1fr 1fr 1fr 1fr}
+.tab-btn{display:flex;flex-direction:column;align-items:center;gap:0.1875rem;padding:0.5rem 0 0.875rem;border:none;background:none;cursor:pointer;color:#b3b3b3;transition:color 0.2s}
+.tab-btn.active{color:#a3916e}
+.tab-icon{font-size:1.25rem}
+.tab-lbl{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
+
+/* TOAST */
+.toast{position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);padding:0.625rem 1.25rem;border-radius:9999px;font-size:0.8125rem;font-weight:500;z-index:50;animation:toastIn 0.3s ease-out;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+.toast.success{background:#2e7d32;color:#fff}
+.toast.error{background:#c62828;color:#fff}
+
+/* ERROR BAR */
+.error-bar{display:flex;gap:0.5rem;padding:0.75rem;border:1px solid #f5c6cb;background:#fff5f5;border-radius:0.625rem;font-size:0.6875rem;color:#c0392b;margin-bottom:0.75rem;align-items:flex-start}
+
+/* ADMIN */
+.admin-user-item{display:flex;justify-content:space-between;align-items:center;padding:0.875rem 1rem;border:1.5px solid #ece8e1;border-radius:0.75rem;margin-bottom:0.5rem;background:#fff}
+.admin-user-name{font-weight:600;font-size:0.875rem}
+.admin-user-role{font-size:0.625rem;color:#8c8c8c;text-transform:uppercase}
+.admin-user-pin{font-family:"SF Mono",monospace;font-size:0.75rem;color:#a3916e;background:#f0ece6;padding:0.125rem 0.5rem;border-radius:0.25rem}
+.admin-actions{display:flex;gap:0.375rem;align-items:center}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:#b3b3b3;font-size:0.875rem}
+
+/* FILTER */
+.filter-bar{display:flex;gap:0.375rem;margin-bottom:1rem;flex-wrap:wrap}
+.filter-chip{padding:0.375rem 0.75rem;border-radius:9999px;font-size:0.6875rem;font-weight:600;border:1.5px solid #e5e0d8;background:#fff;color:#8c8c8c;cursor:pointer;transition:all 0.2s}
+.filter-chip.active{background:#a3916e;color:#fff;border-color:#a3916e}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="container" id="app">
+
+<!-- ========== LOGIN ========== -->
+<div id="loginScreen" class="login-screen">
+    <div class="login-logo">TRIA CAPITAL</div>
+    <div class="login-title">Reporte <span>Oro</span></div>
+    <div class="login-box">
+        <div class="login-field">
+            <label class="login-label">Usuario</label>
+            <select id="loginUser" class="login-select"></select>
+        </div>
+        <div class="login-field">
+            <label class="login-label">PIN</label>
+            <input type="password" id="loginPin" class="login-input" maxlength="4" inputmode="numeric" placeholder="····" autocomplete="off">
+        </div>
+        <button id="loginBtn" class="login-btn">Entrar</button>
+        <div id="loginError" class="login-error"></div>
+    </div>
+</div>
+
+<!-- ========== MAIN APP ========== -->
+<div id="mainApp" class="hidden">
+    <div class="header">
+        <div class="header-left">
+            <h1>TRIA Capital</h1>
+            <div class="title">Reporte Oro</div>
+        </div>
+        <div class="header-right">
+            <p>Sesión</p>
+            <div class="header-user" id="headerUser">—</div>
+            <button class="logout-btn" id="logoutBtn">Cerrar sesión</button>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- TAB: CALCULAR -->
+        <div id="calcTab" class="tab-content active">
+            <!-- Admin: selector de operador destino -->
+            <div id="adminOperadorSection" class="section hidden">
+                <div class="section-label">Registrar a nombre de</div>
+                <select id="adminOperador" style="margin-bottom:0.5rem"></select>
+            </div>
+
+            <!-- Precios -->
+            <div class="section">
+                <div class="section-label">Precios en vivo</div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-header-label">Tiempo real</div>
+                        <button class="refresh-btn" id="refreshBtn">🔄 <span id="lastUpdate">Cargar</span></button>
+                    </div>
+                    <div class="price-grid">
+                        <div class="price-cell">
+                            <div class="price-cell-top">
+                                <div><div class="price-cell-label">Dólar (TRM)</div><div class="price-cell-sub">Superfinanciera</div></div>
+                                <button class="edit-btn" id="editDolarBtn">✏️</button>
+                            </div>
+                            <div class="price-value" id="dolarDisplay">—</div>
+                            <div class="price-edit" id="dolarEdit">
+                                <input type="number" id="dolarInput" step="0.01">
+                                <button id="dolarSave">✓</button>
+                                <button id="dolarCancel">✕</button>
+                            </div>
+                        </div>
+                        <div class="price-cell">
+                            <div class="price-cell-top">
+                                <div><div class="price-cell-label">Onza XAU/USD</div><div class="price-cell-sub">Gold spot</div></div>
+                                <button class="edit-btn" id="editOnzaBtn">✏️</button>
+                            </div>
+                            <div class="price-value" id="onzaDisplay">—</div>
+                            <div class="price-edit" id="onzaEdit">
+                                <input type="number" id="onzaInput" step="0.01">
+                                <button id="onzaSave">✓</button>
+                                <button id="onzaCancel">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="priceError" class="error-bar hidden">⚠️ <span id="priceErrorMsg"></span></div>
+                </div>
+            </div>
+
+            <!-- Formulario -->
+            <div class="section">
+                <div class="section-label">Datos del negocio</div>
+                <div class="grid-2">
+                    <div class="field"><div class="field-label">Fecha</div><input type="date" id="fecha"></div>
+                    <div class="field"><div class="field-label">Hora exacta</div><input type="time" id="hora"></div>
+                </div>
+                <div class="field"><div class="field-label">Proveedor</div><input type="text" id="proveedor" placeholder="Ej: Juan Pérez"></div>
+                <div class="grid-2">
+                    <div class="field"><div class="field-label">Gramos</div><input type="number" id="gramos" inputmode="decimal" placeholder="1361" step="0.01"></div>
+                    <div class="field"><div class="field-label">% Regalías</div><input type="number" id="regalias" inputmode="decimal" value="95" step="0.5" min="0" max="100"></div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Precio compra por gramo (COP)</div>
+                    <input type="number" id="pCompra" inputmode="decimal" placeholder="391000" step="0.01">
+                    <div id="vCompraHint" class="input-hint"></div>
+                </div>
+                <div class="field"><div class="field-label">Gastos variables (COP)</div><input type="number" id="gastos" inputmode="decimal" placeholder="9527000" step="0.01"></div>
+                <div class="field"><div class="field-label">Comentarios (opcional)</div><textarea id="comentarios" placeholder="Notas del negocio…"></textarea></div>
+            </div>
+
+            <!-- Cálculos -->
+            <div class="section">
+                <div class="section-label">Cálculo</div>
+                <div class="card">
+                    <div class="card-row"><div class="card-row-label">Cierre (USD × TRM)</div><div class="card-row-value" id="cierreD">—</div></div>
+                    <div class="card-row"><div><div class="card-row-label">Gramo 100%</div><div class="card-row-sub">÷ 31.1035</div></div><div class="card-row-value" id="gr100D">—</div></div>
+                    <div class="card-row row-accent"><div class="card-row-label">Gramo cierre (<span id="regBadge">95</span>%)</div><div class="card-row-value" id="grCierreD">—</div></div>
+                    <div class="card-row"><div><div class="card-row-label">Precio cierre total</div><div class="card-row-sub" id="gramosHint"></div></div><div class="card-row-value" id="pCierreD">—</div></div>
+                    <div class="card-row"><div class="card-row-label" style="color:#999">Valor compra</div><div class="card-row-value" style="color:#999" id="vCompraD">—</div></div>
+                    <div class="card-row row-bold"><div class="card-row-label">Utilidad bruta</div><div class="card-row-value" id="uBrutaD">—</div></div>
+                    <div class="card-row" style="padding:0.5rem 1rem"><div class="card-row-label" style="font-size:0.6875rem">− Gastos</div><div class="card-row-value" style="font-size:0.75rem;color:#999" id="gastosD">—</div></div>
+                </div>
+                <div id="resultBox" class="result-box hidden">
+                    <div class="result-label">Utilidad Neta</div>
+                    <div class="result-value" id="uNetaD">—</div>
+                    <div class="split-grid">
+                        <div class="split-card"><div class="split-card-label">U · <span id="splitName">—</span></div><div class="split-card-value" id="uOpD">—</div></div>
+                        <div class="split-card"><div class="split-card-label">U · TRIA</div><div class="split-card-value" id="uTriaD">—</div></div>
+                    </div>
+                </div>
+            </div>
+            <button id="saveBtn" class="btn btn-primary" disabled>💾 Guardar reporte</button>
+            <div id="saveMsg" class="input-hint" style="text-align:center;margin-top:0.5rem;display:none">Completa gramos, precio compra y precios en vivo</div>
+        </div>
+
+        <!-- TAB: HISTORIAL -->
+        <div id="historyTab" class="tab-content">
+            <div class="section">
+                <div class="section-label">Totales</div>
+                <div class="grid-3" id="totalsGrid">
+                    <div class="total-card"><div class="total-label">Reportes</div><div class="total-value" id="totR">0</div></div>
+                    <div class="total-card"><div class="total-label">Gramos</div><div class="total-value" id="totG">0</div></div>
+                    <div class="total-card"><div class="total-label">U · TRIA</div><div class="total-value green" id="totU">—</div></div>
+                </div>
+            </div>
+            <div id="adminFilterSection" class="hidden">
+                <div class="section-label">Filtrar por operador</div>
+                <div class="filter-bar" id="filterBar"></div>
+            </div>
+            <button id="exportBtn" class="btn btn-secondary" style="margin-bottom:1rem">📊 Exportar a Excel</button>
+            <div id="historyList"></div>
+        </div>
+
+        <!-- TAB: PERFIL -->
+        <div id="profileTab" class="tab-content">
+            <div class="section">
+                <div class="section-label">Mi perfil</div>
+                <div class="card" style="padding:1.25rem">
+                    <div style="font-size:1.125rem;font-weight:700;margin-bottom:0.25rem" id="profileName">—</div>
+                    <div style="font-size:0.75rem;color:#8c8c8c;text-transform:uppercase" id="profileRole">Operador</div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-label">Cambiar PIN</div>
+                <div class="field"><div class="field-label">PIN actual</div><input type="password" id="pinActual" maxlength="4" inputmode="numeric" class="mono" autocomplete="off"></div>
+                <div class="field"><div class="field-label">Nuevo PIN (4 dígitos)</div><input type="password" id="pinNuevo" maxlength="4" inputmode="numeric" class="mono" autocomplete="off"></div>
+                <button id="changePinBtn" class="btn btn-secondary">Cambiar PIN</button>
+            </div>
+            <div class="section">
+                <div class="section-label">Fuentes de datos</div>
+                <div class="card" style="padding:1rem;font-size:0.6875rem;color:#8c8c8c;line-height:1.6">
+                    <div style="margin-bottom:0.75rem"><div style="color:#666;font-size:0.75rem">Oro spot (XAU/USD)</div><div class="mono" style="color:#a3916e;margin-top:0.125rem">api.gold-api.com</div></div>
+                    <div style="border-top:1px solid #ece8e1;padding-top:0.75rem"><div style="color:#666;font-size:0.75rem">Dólar TRM</div><div class="mono" style="color:#a3916e;margin-top:0.125rem">datos.gov.co · Superfinanciera</div><div style="margin-top:0.375rem;font-size:0.625rem">La TRM puede diferir del dólar Banco de Bogotá. Edita manualmente si necesitas la tasa exacta.</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: ADMIN -->
+        <div id="adminTab" class="tab-content">
+            <div class="section">
+                <div class="section-label">Usuarios registrados</div>
+                <div id="adminUserList"></div>
+            </div>
+            <div class="section">
+                <div class="section-label">Agregar usuario</div>
+                <div class="grid-2">
+                    <div class="field"><div class="field-label">Nombre</div><input type="text" id="newUserName" placeholder="Nombre completo"></div>
+                    <div class="field"><div class="field-label">PIN (4 dígitos)</div><input type="text" id="newUserPin" maxlength="4" inputmode="numeric" class="mono" placeholder="0000"></div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Rol</div>
+                    <select id="newUserRole"><option value="operador">Operador</option><option value="admin">Administrador</option></select>
+                </div>
+                <button id="addUserBtn" class="btn btn-primary">Agregar usuario</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TAB BAR -->
+    <div class="tab-bar tabs-3" id="tabBar">
+        <button class="tab-btn active" data-tab="calcTab"><span class="tab-icon">🧮</span><span class="tab-lbl">Calcular</span></button>
+        <button class="tab-btn" data-tab="historyTab"><span class="tab-icon">📋</span><span class="tab-lbl">Historial</span></button>
+        <button class="tab-btn" data-tab="profileTab"><span class="tab-icon">👤</span><span class="tab-lbl">Perfil</span></button>
+    </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div><div class="modal-title-small" id="detailTitle">—</div><div class="modal-title" id="detailGrams">—</div></div>
+            <button class="close-btn" id="closeDetail">✕</button>
+        </div>
+        <div class="modal-body" id="detailBody"></div>
+    </div>
+</div>
+<!-- MODAL EDITAR PIN ADMIN -->
+<div id="editPinModal" class="modal">
+    <div class="modal-content" style="border-radius:1.25rem 1.25rem 0 0">
+        <div class="modal-header"><div><div class="modal-title-small">Cambiar PIN</div><div class="modal-title" id="editPinUser">—</div></div><button class="close-btn" id="closeEditPin">✕</button></div>
+        <div class="modal-body">
+            <div class="field"><div class="field-label">Nuevo PIN (4 dígitos)</div><input type="text" id="editPinInput" maxlength="4" inputmode="numeric" class="mono"></div>
+            <button id="editPinSave" class="btn btn-primary">Guardar</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+const CONVER=31.1035;
+const fmtCOP=n=>{if(n==null||isNaN(n))return'—';return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n)};
+const fmtUSD=n=>{if(n==null||isNaN(n))return'—';return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n)};
+const fmtNum=(n,d=2)=>{if(n==null||isNaN(n))return'—';return new Intl.NumberFormat('es-CO',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n)};
+const pn=s=>{if(s===''||s==null)return 0;const v=parseFloat(String(s));return isNaN(v)?0:v};
+const today=()=>new Date().toISOString().split('T')[0];
+const toast=(m,t='success')=>{const e=$('toast');e.textContent=m;e.className='toast '+t;e.style.display='block';setTimeout(()=>e.style.display='none',2500)};
+const $=id=>document.getElementById(id);
+const show=(el)=>{if(typeof el==='string')el=$(el);el.classList.remove('hidden')};
+const hide=(el)=>{if(typeof el==='string')el=$(el);el.classList.add('hidden')};
+
+const DEFAULT_USERS=[
+    {id:1,name:'ADMINISTRADOR',pin:'0000',role:'admin'},
+    {id:2,name:'DANIEL GIRALDO',pin:'1234',role:'operador'},
+    {id:3,name:'OPERADOR 2',pin:'5678',role:'operador'},
+    {id:4,name:'OPERADOR 3',pin:'9012',role:'operador'},
+];
+
+let users=[];
+let reports=[];
+let currentUser=null;
+let dolar=null,onza=null;
+let historyFilter='all';
+
+// ===== STORAGE =====
+async function loadUsers(){
+    try{const r=await window.storage.get('tria-users',true);if(r&&r.value)users=JSON.parse(r.value);else{users=[...DEFAULT_USERS];await saveUsers()}}catch(e){users=[...DEFAULT_USERS]}
+}
+async function saveUsers(){try{await window.storage.set('tria-users',JSON.stringify(users),true)}catch(e){}}
+async function loadReports(){try{const r=await window.storage.get('tria-reports',true);if(r&&r.value)reports=JSON.parse(r.value);else reports=[]}catch(e){reports=[]}}
+async function saveReports(){try{await window.storage.set('tria-reports',JSON.stringify(reports),true)}catch(e){}}
+async function loadPrices(){try{const r=await window.storage.get('tria-prices',true);if(r&&r.value){const p=JSON.parse(r.value);dolar=p.dolar;onza=p.onza}}catch(e){}}
+async function savePrices(){try{await window.storage.set('tria-prices',JSON.stringify({dolar,onza}),true)}catch(e){}}
+
+// ===== LOGIN =====
+async function initLogin(){
+    await loadUsers();
+    const sel=$('loginUser');
+    sel.innerHTML='';
+    users.forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.name+(u.role==='admin'?' (Admin)':'');sel.appendChild(o)});
+}
+$('loginBtn').onclick=()=>{
+    const uid=parseInt($('loginUser').value);
+    const pin=$('loginPin').value;
+    const user=users.find(u=>u.id===uid);
+    if(!user){$('loginError').textContent='Usuario no encontrado';return}
+    if(user.pin!==pin){$('loginError').textContent='PIN incorrecto';return}
+    $('loginError').textContent='';
+    currentUser=user;
+    enterApp();
+};
+$('loginPin').onkeydown=e=>{if(e.key==='Enter')$('loginBtn').click()};
+$('logoutBtn').onclick=()=>{currentUser=null;hide('mainApp');show('loginScreen');$('loginPin').value='';$('loginError').textContent=''};
+
+// ===== ENTER APP =====
+async function enterApp(){
+    hide('loginScreen');show('mainApp');
+    await loadReports();await loadPrices();
+    const isAdmin=currentUser.role==='admin';
+    $('headerUser').innerHTML=currentUser.name+(isAdmin?'<span class="header-badge">ADMIN</span>':'');
+    // tabs
+    const bar=$('tabBar');
+    if(isAdmin){
+        bar.className='tab-bar tabs-4';
+        bar.innerHTML=`
+            <button class="tab-btn active" data-tab="calcTab"><span class="tab-icon">🧮</span><span class="tab-lbl">Calcular</span></button>
+            <button class="tab-btn" data-tab="historyTab"><span class="tab-icon">📋</span><span class="tab-lbl">Historial</span></button>
+            <button class="tab-btn" data-tab="adminTab"><span class="tab-icon">👥</span><span class="tab-lbl">Admin</span></button>
+            <button class="tab-btn" data-tab="profileTab"><span class="tab-icon">👤</span><span class="tab-lbl">Perfil</span></button>`;
+        show('adminOperadorSection');show('adminFilterSection');
+        renderAdminOperadorSelect();
+        renderAdminUsers();
+    }else{
+        bar.className='tab-bar tabs-3';
+        bar.innerHTML=`
+            <button class="tab-btn active" data-tab="calcTab"><span class="tab-icon">🧮</span><span class="tab-lbl">Calcular</span></button>
+            <button class="tab-btn" data-tab="historyTab"><span class="tab-icon">📋</span><span class="tab-lbl">Historial</span></button>
+            <button class="tab-btn" data-tab="profileTab"><span class="tab-icon">👤</span><span class="tab-lbl">Perfil</span></button>`;
+        hide('adminOperadorSection');hide('adminFilterSection');
+    }
+    bar.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+    switchTab('calcTab');
+    $('fecha').value=today();
+    $('profileName').textContent=currentUser.name;
+    $('profileRole').textContent=isAdmin?'Administrador':'Operador';
+    renderPrices();renderHistory();fetchPrices();
+}
+
+function getTargetOperator(){
+    if(currentUser.role==='admin'){
+        const sel=$('adminOperador');
+        const uid=parseInt(sel.value);
+        return users.find(u=>u.id===uid)||currentUser;
+    }
+    return currentUser;
+}
+function renderAdminOperadorSelect(){
+    const sel=$('adminOperador');sel.innerHTML='';
+    users.filter(u=>u.role==='operador').forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.name;sel.appendChild(o)});
+}
+
+// ===== TABS =====
+function switchTab(id){
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    $(id).classList.add('active');
+    const btn=document.querySelector(`[data-tab="${id}"]`);if(btn)btn.classList.add('active');
+    if(id==='historyTab')renderHistory();
+}
+
+// ===== PRICES =====
+async function fetchPrices(){
+    $('refreshBtn').disabled=true;
+    try{
+        const[gR,tR]=await Promise.all([fetch('https://api.gold-api.com/price/XAU'),fetch('https://www.datos.gov.co/resource/32sa-8pi3.json?$order=vigenciadesde%20DESC&$limit=1')]);
+        if(!gR.ok||!tR.ok)throw 0;
+        const g=await gR.json(),t=await tR.json();
+        dolar=parseFloat(t[0].valor);onza=g.price;
+        hide('priceError');renderPrices();savePrices();
+        $('lastUpdate').textContent=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    }catch(e){show('priceError');$('priceErrorMsg').textContent='No se pudo conectar. Edita manualmente.'}
+    finally{$('refreshBtn').disabled=false}
+}
+function renderPrices(){
+    $('dolarDisplay').textContent=dolar?fmtCOP(dolar):'—';
+    $('onzaDisplay').textContent=onza?fmtUSD(onza):'—';
+    updateCalc();
+}
+$('refreshBtn').onclick=fetchPrices;
+// edit dolar
+$('editDolarBtn').onclick=()=>{$('dolarEdit').classList.add('active');$('dolarInput').value=dolar||'';$('dolarInput').focus()};
+$('dolarSave').onclick=()=>{const v=pn($('dolarInput').value);if(v>0)dolar=v;$('dolarEdit').classList.remove('active');renderPrices();savePrices()};
+$('dolarCancel').onclick=()=>$('dolarEdit').classList.remove('active');
+$('dolarInput').onkeydown=e=>{if(e.key==='Enter')$('dolarSave').click();if(e.key==='Escape')$('dolarCancel').click()};
+// edit onza
+$('editOnzaBtn').onclick=()=>{$('onzaEdit').classList.add('active');$('onzaInput').value=onza||'';$('onzaInput').focus()};
+$('onzaSave').onclick=()=>{const v=pn($('onzaInput').value);if(v>0)onza=v;$('onzaEdit').classList.remove('active');renderPrices();savePrices()};
+$('onzaCancel').onclick=()=>$('onzaEdit').classList.remove('active');
+$('onzaInput').onkeydown=e=>{if(e.key==='Enter')$('onzaSave').click();if(e.key==='Escape')$('onzaCancel').click()};
+
+// ===== CALC =====
+function updateCalc(){
+    const d=dolar||0,o=onza||0;
+    const g=pn($('gramos').value),pc=pn($('pCompra').value),gs=pn($('gastos').value);
+    const reg=pn($('regalias').value)||95;
+    const cierre=d*o,gr100=cierre/CONVER,grCierre=gr100*(reg/100);
+    const pCierre=g*grCierre,vCompra=g*pc;
+    const uBruta=pCierre-vCompra,uNeta=uBruta-gs;
+    const target=getTargetOperator();
+    $('cierreD').textContent=fmtCOP(cierre);
+    $('gr100D').textContent=fmtCOP(gr100);
+    $('grCierreD').textContent=fmtCOP(grCierre);
+    $('regBadge').textContent=reg;
+    $('pCierreD').textContent=fmtCOP(pCierre);
+    $('vCompraD').textContent=fmtCOP(vCompra);
+    $('uBrutaD').textContent=fmtCOP(uBruta);
+    $('gastosD').textContent=fmtCOP(gs);
+    $('uNetaD').textContent=fmtCOP(uNeta);
+    $('uOpD').textContent=fmtCOP(uNeta/2);
+    $('uTriaD').textContent=fmtCOP(uNeta/2);
+    $('splitName').textContent=target.name;
+    $('gramosHint').textContent=g>0?fmtNum(g,2)+' g':'';
+    $('vCompraHint').textContent=(g>0&&pc>0)?'V. Compra: '+fmtCOP(vCompra):'';
+    const can=g>0&&pc>0&&dolar&&onza;
+    $('saveBtn').disabled=!can;
+    $('saveMsg').style.display=can?'none':'block';
+    if(g>0&&pc>0){
+        show('resultBox');
+        const rb=$('resultBox');
+        if(uNeta>=0){rb.className='result-box';$('uNetaD').style.color='#2e7d32'}
+        else{rb.className='result-box negative';$('uNetaD').style.color='#c62828'}
+    }else hide('resultBox');
+}
+$('gramos').oninput=updateCalc;$('pCompra').oninput=updateCalc;$('gastos').oninput=updateCalc;$('regalias').oninput=updateCalc;
+if($('adminOperador'))$('adminOperador').onchange=updateCalc;
+
+// ===== SAVE REPORT =====
+$('saveBtn').onclick=async()=>{
+    const target=getTargetOperator();
+    const g=pn($('gramos').value),pc=pn($('pCompra').value),gs=pn($('gastos').value);
+    const reg=pn($('regalias').value)||95;
+    const cierre=dolar*onza,gr100=cierre/CONVER,grCierre=gr100*(reg/100);
+    const pCierre=g*grCierre,vCompra=g*pc,uBruta=pCierre-vCompra,uNeta=uBruta-gs;
+    const r={
+        id:Date.now(),
+        odId:target.id,operador:target.name,
+        creadoPor:currentUser.name,
+        fecha:$('fecha').value,hora:$('hora').value||'',
+        proveedor:$('proveedor').value.trim(),
+        comentarios:$('comentarios').value.trim(),
+        gramos:g,dolar,onza,pCompra:pc,gastos:gs,porcRegalias:reg,
+        cierre,gr100,grCierre,pCierre,vCompra,uBruta,uNeta,
+        uOperador:uNeta/2,uTria:uNeta/2,
+        createdAt:new Date().toISOString()
+    };
+    reports.push(r);await saveReports();
+    $('gramos').value='';$('pCompra').value='';$('gastos').value='';$('proveedor').value='';$('hora').value='';$('comentarios').value='';$('regalias').value='95';
+    updateCalc();toast('Reporte guardado');switchTab('historyTab');
+};
+
+// ===== HISTORY =====
+function getVisibleReports(){
+    if(currentUser.role==='admin'){
+        if(historyFilter==='all')return reports;
+        return reports.filter(r=>r.odId===parseInt(historyFilter));
+    }
+    return reports.filter(r=>r.odId===currentUser.id);
+}
+function renderHistory(){
+    const vis=getVisibleReports();
+    const totR=vis.length,totG=vis.reduce((s,r)=>s+(r.gramos||0),0),totU=vis.reduce((s,r)=>s+(r.uTria||0),0);
+    $('totR').textContent=totR;$('totG').textContent=fmtNum(totG,0);$('totU').textContent=fmtCOP(totU);
+    // Admin filter chips
+    if(currentUser.role==='admin'){
+        const fb=$('filterBar');
+        const ops=users.filter(u=>u.role==='operador');
+        fb.innerHTML=`<div class="filter-chip ${historyFilter==='all'?'active':''}" data-f="all">Todos</div>`+
+            ops.map(o=>`<div class="filter-chip ${historyFilter==String(o.id)?'active':''}" data-f="${o.id}">${o.name}</div>`).join('');
+        fb.querySelectorAll('.filter-chip').forEach(c=>c.onclick=()=>{historyFilter=c.dataset.f;renderHistory()});
+    }
+    const list=$('historyList');
+    if(!vis.length){list.innerHTML='<div class="empty-state">No hay reportes</div>';return}
+    list.innerHTML=vis.slice().reverse().map(r=>`
+        <div class="history-item" onclick="openDetail(${r.id})">
+            <div class="history-header">
+                <div class="history-badges"><span class="badge">${r.operador}</span><span class="badge-date">${r.fecha}${r.hora?' · '+r.hora:''}</span></div>
+            </div>
+            <div class="history-body">
+                <div><div class="history-grams">${fmtNum(r.gramos,2)} g</div>${r.proveedor?'<div class="history-prov">'+r.proveedor+'</div>':''}</div>
+                <div style="text-align:right"><div class="history-profit ${r.uNeta>=0?'profit-pos':'profit-neg'}">${fmtCOP(r.uNeta)}</div><div class="history-profit-label">U. Neta</div></div>
+            </div>
+        </div>`).join('');
+}
+
+// ===== DETAIL MODAL =====
+window.openDetail=id=>{
+    const r=reports.find(x=>x.id===id);if(!r)return;
+    $('detailTitle').textContent=r.operador+' · '+r.fecha+(r.hora?' · '+r.hora:'');
+    $('detailGrams').textContent=fmtNum(r.gramos,2)+' g';
+    let h='';
+    if(r.proveedor)h+=`<div style="margin-bottom:1rem"><div class="field-label">Proveedor</div><div style="font-size:0.875rem">${r.proveedor}</div></div>`;
+    const rows=[['Dólar',fmtCOP(r.dolar)],['Onza USD',fmtUSD(r.onza)],['Cierre',fmtCOP(r.cierre)],['Gramo 100%',fmtCOP(r.gr100)],
+        ['Gramo cierre ('+r.porcRegalias+'%)',fmtCOP(r.grCierre)],['Precio cierre',fmtCOP(r.pCierre)],['Precio compra/g',fmtCOP(r.pCompra)],
+        ['Valor compra',fmtCOP(r.vCompra)],['Utilidad bruta',fmtCOP(r.uBruta)],['Gastos',fmtCOP(r.gastos)],['Utilidad neta',fmtCOP(r.uNeta)]];
+    h+='<div class="card">'+rows.map(([l,v])=>{
+        const acc=l.includes('Gramo cierre');const bold=l==='Utilidad neta';
+        return `<div class="card-row ${acc?'row-accent':''} ${bold?'row-bold':''}"><div class="card-row-label">${l}</div><div class="card-row-value">${v}</div></div>`
+    }).join('')+'</div>';
+    h+=`<div class="split-grid" style="margin-top:1rem">
+        <div class="split-card" style="border-color:#c8e6c9;background:#f1f8e9"><div class="split-card-label" style="color:#2e7d32">U · ${r.operador}</div><div class="split-card-value" style="color:#2e7d32">${fmtCOP(r.uOperador)}</div></div>
+        <div class="split-card" style="border-color:#e5ddd0;background:#faf6ef"><div class="split-card-label" style="color:#a3916e">U · TRIA</div><div class="split-card-value" style="color:#a3916e">${fmtCOP(r.uTria)}</div></div></div>`;
+    if(r.comentarios)h+=`<div style="margin-top:1rem;padding:0.75rem;border:1px solid #ece8e1;border-radius:0.75rem;background:#faf9f6"><div class="field-label">Comentarios</div><div style="font-size:0.8125rem;margin-top:0.25rem">${r.comentarios}</div></div>`;
+    if(r.creadoPor&&r.creadoPor!==r.operador)h+=`<div style="text-align:center;font-size:0.625rem;color:#b3b3b3;margin-top:0.75rem">Creado por ${r.creadoPor}</div>`;
+    h+=`<div style="text-align:center;font-size:0.625rem;color:#b3b3b3;margin-top:0.5rem">${new Date(r.createdAt).toLocaleString('es-CO')}</div>`;
+    const canDel=currentUser.role==='admin'||r.odId===currentUser.id;
+    if(canDel)h+=`<button onclick="delReport(${r.id})" class="btn btn-danger" style="margin-top:1rem">🗑️ Eliminar reporte</button>`;
+    $('detailBody').innerHTML=h;
+    $('detailModal').classList.add('active');
+};
+$('closeDetail').onclick=()=>$('detailModal').classList.remove('active');
+$('detailModal').onclick=e=>{if(e.target===$('detailModal'))$('detailModal').classList.remove('active')};
+
+window.delReport=async id=>{
+    if(!confirm('¿Eliminar este reporte?'))return;
+    reports=reports.filter(r=>r.id!==id);await saveReports();
+    $('detailModal').classList.remove('active');renderHistory();toast('Reporte eliminado');
+};
+
+// ===== EXPORT =====
+$('exportBtn').onclick=()=>{
+    const vis=getVisibleReports();if(!vis.length)return;
+    const rows=vis.slice().reverse().map(r=>({FECHA:r.fecha,HORA:r.hora||'',OPERADOR:r.operador,PROVEEDOR:r.proveedor||'',
+        GRAMOS:r.gramos,DOLAR:r.dolar,ONZA:r.onza,CIERRE:r.cierre,CONVER,
+        'GR 100%':r.gr100,'% REGALIAS':r.porcRegalias,'GR CIERRE':r.grCierre,
+        'P CIERRE':r.pCierre,'P COMPRA':r.pCompra,'V COMPRA':r.vCompra,
+        'U BRUTA':r.uBruta,GASTOS:r.gastos,'U NETA':r.uNeta,
+        'U OPERADOR':r.uOperador,'U TRIA':r.uTria,COMENTARIOS:r.comentarios||'',
+        GUARDADO:new Date(r.createdAt).toLocaleString('es-CO')}));
+    const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Reportes');
+    XLSX.writeFile(wb,`TRIA_Reportes_${today()}.xlsx`);toast('Excel descargado');
+};
+
+// ===== PROFILE: CHANGE PIN =====
+$('changePinBtn').onclick=async()=>{
+    const act=$('pinActual').value,nw=$('pinNuevo').value;
+    if(act!==currentUser.pin){toast('PIN actual incorrecto','error');return}
+    if(!/^\d{4}$/.test(nw)){toast('El nuevo PIN debe ser de 4 dígitos','error');return}
+    const u=users.find(x=>x.id===currentUser.id);u.pin=nw;currentUser.pin=nw;
+    await saveUsers();$('pinActual').value='';$('pinNuevo').value='';toast('PIN cambiado');
+};
+
+// ===== ADMIN =====
+function renderAdminUsers(){
+    const list=$('adminUserList');
+    list.innerHTML=users.map(u=>`
+        <div class="admin-user-item">
+            <div><div class="admin-user-name">${u.name}</div><div class="admin-user-role">${u.role==='admin'?'Administrador':'Operador'}</div></div>
+            <div class="admin-actions">
+                <span class="admin-user-pin">${u.pin}</span>
+                <button onclick="editUserPin(${u.id})" class="edit-btn" style="font-size:0.875rem">✏️</button>
+                <button onclick="editUserName(${u.id})" class="edit-btn" style="font-size:0.875rem">📝</button>
+                ${users.length>1?`<button onclick="delUser(${u.id})" class="edit-btn" style="font-size:0.875rem;color:#c0392b">🗑️</button>`:''}
+            </div>
+        </div>`).join('');
+}
+$('addUserBtn').onclick=async()=>{
+    const name=$('newUserName').value.trim().toUpperCase();
+    const pin=$('newUserPin').value;
+    const role=$('newUserRole').value;
+    if(!name){toast('Escribe un nombre','error');return}
+    if(!/^\d{4}$/.test(pin)){toast('PIN debe ser 4 dígitos','error');return}
+    if(users.find(u=>u.name===name)){toast('Ese nombre ya existe','error');return}
+    users.push({id:Date.now(),name,pin,role});
+    await saveUsers();$('newUserName').value='';$('newUserPin').value='';
+    renderAdminUsers();renderAdminOperadorSelect();toast('Usuario agregado');
+};
+window.editUserPin=id=>{
+    const u=users.find(x=>x.id===id);if(!u)return;
+    $('editPinUser').textContent=u.name;$('editPinInput').value=u.pin;
+    $('editPinModal').classList.add('active');
+    $('editPinSave').onclick=async()=>{
+        const nw=$('editPinInput').value;
+        if(!/^\d{4}$/.test(nw)){toast('4 dígitos','error');return}
+        u.pin=nw;if(u.id===currentUser.id)currentUser.pin=nw;
+        await saveUsers();$('editPinModal').classList.remove('active');renderAdminUsers();toast('PIN actualizado');
+    };
+};
+$('closeEditPin').onclick=()=>$('editPinModal').classList.remove('active');
+$('editPinModal').onclick=e=>{if(e.target===$('editPinModal'))$('editPinModal').classList.remove('active')};
+
+window.editUserName=async id=>{
+    const u=users.find(x=>x.id===id);if(!u)return;
+    const nn=prompt('Nuevo nombre para '+u.name+':',u.name);
+    if(!nn||!nn.trim())return;
+    const old=u.name;u.name=nn.trim().toUpperCase();
+    reports.forEach(r=>{if(r.odId===id)r.operador=u.name});
+    if(u.id===currentUser.id){currentUser.name=u.name;$('headerUser').innerHTML=u.name+(u.role==='admin'?'<span class="header-badge">ADMIN</span>':'');$('profileName').textContent=u.name}
+    await saveUsers();await saveReports();renderAdminUsers();renderAdminOperadorSelect();renderHistory();toast('Nombre actualizado');
+};
+window.delUser=async id=>{
+    const u=users.find(x=>x.id===id);if(!u)return;
+    if(u.id===currentUser.id){toast('No puedes eliminarte a ti mismo','error');return}
+    if(!confirm('¿Eliminar a '+u.name+'? Sus reportes se conservan.'))return;
+    users=users.filter(x=>x.id!==id);await saveUsers();
+    renderAdminUsers();renderAdminOperadorSelect();toast('Usuario eliminado');
+};
+
+// ===== INIT =====
+initLogin();
+</script>
+</body>
+</html>
