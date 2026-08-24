@@ -261,7 +261,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
         <!-- HISTORIAL -->
         <div id="historyTab" class="tab-content">
             <div class="section"><div class="section-label">Totales</div><div class="grid-3"><div class="total-card"><div class="total-label">Reportes</div><div class="total-value" id="tR">0</div></div><div class="total-card"><div class="total-label">Gramos</div><div class="total-value" id="tG">0</div></div><div class="total-card"><div class="total-label">U · TRIA</div><div class="total-value green" id="tU">—</div></div></div></div>
-            <div id="adminFiltSec" class="hidden"><div class="section-label">Filtrar</div><div class="filter-bar" id="filtBar"></div></div>
+            <div id="adminFiltSec"><div class="section-label">Filtrar</div><div class="filter-bar" id="filtBar"></div></div>
             <button id="expBtn" class="btn btn-secondary" style="margin-bottom:1rem">📊 Exportar a Excel</button>
             <div id="histList"></div>
         </div>
@@ -342,7 +342,7 @@ function enterApp(){
     }else{
         bar.className='tab-bar tabs-3';
         bar.innerHTML='<button class="tab-btn active" data-tab="calcTab"><span class="tab-icon">🧮</span><span class="tab-lbl">Calcular</span></button><button class="tab-btn" data-tab="historyTab"><span class="tab-icon">📋</span><span class="tab-lbl">Historial</span></button><button class="tab-btn" data-tab="profileTab"><span class="tab-icon">👤</span><span class="tab-lbl">Perfil</span></button>';
-        hide('adminOpSec');hide('adminFiltSec');
+        hide('adminOpSec');show('adminFiltSec');
     }
     bar.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>swTab(b.dataset.tab));
     swTab('calcTab');$('fecha').value=tdy();
@@ -396,15 +396,13 @@ $('saveBtn').onclick=async()=>{
 };
 
 // HISTORY
-function getVis(){if(curUser.role==='admin')return hFilt==='all'?reports:reports.filter(r=>r.odId===hFilt);return reports.filter(r=>r.odId===curUser.id)}
+function getVis(){return hFilt==='all'?reports:reports.filter(r=>r.odId===hFilt)}
 function renderHistory(){
     const vis=getVis();
     $('tR').textContent=vis.length;$('tG').textContent=fN(vis.reduce((s,r)=>s+(r.gramos||0),0),0);$('tU').textContent=fC(vis.reduce((s,r)=>s+(r.uTria||0),0));
-    if(curUser.role==='admin'){
-        const fb=$('filtBar'),ops=users.filter(u=>u.role==='operador');
-        fb.innerHTML=`<div class="filter-chip ${hFilt==='all'?'active':''}" data-f="all">Todos</div>`+ops.map(o=>`<div class="filter-chip ${hFilt===o.id?'active':''}" data-f="${o.id}">${o.name}</div>`).join('');
-        fb.querySelectorAll('.filter-chip').forEach(c=>c.onclick=()=>{hFilt=c.dataset.f;renderHistory()});
-    }
+    const fb=$('filtBar'),ops=users.filter(u=>u.role==='operador');
+    fb.innerHTML=`<div class="filter-chip ${hFilt==='all'?'active':''}" data-f="all">Todos</div>`+ops.map(o=>`<div class="filter-chip ${hFilt===o.id?'active':''}" data-f="${o.id}">${o.name}</div>`).join('');
+    fb.querySelectorAll('.filter-chip').forEach(c=>c.onclick=()=>{hFilt=c.dataset.f;renderHistory()});
     const l=$('histList');
     if(!vis.length){l.innerHTML='<div class="empty-state">No hay reportes</div>';return}
     l.innerHTML=vis.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).map(r=>`
