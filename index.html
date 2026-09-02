@@ -17,7 +17,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;background:var(--bg-darkest);color:var(--text-primary);overflow-x:hidden}
 .mono{font-family:"SF Mono",Menlo,Consolas,monospace}
-.container{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg-dark);position:relative}
+.container{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg-dark);position:relative;overflow-x:hidden}
 ::-webkit-scrollbar{width:8px;height:8px}
 ::-webkit-scrollbar-track{background:var(--bg-dark)}
 ::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:4px}
@@ -54,7 +54,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Robot
 .logout-btn{background:none;border:none;font-size:0.6875rem;color:var(--text-secondary);cursor:pointer;margin-top:0.125rem;text-decoration:underline}
 
 /* CONTENT */
-.content{padding:1.25rem;padding-bottom:7rem}
+.content{padding:1rem;padding-bottom:7rem}
 .tab-content{display:none}.tab-content.active{display:block}
 .section{margin-bottom:1.5rem}
 .section-label{font-size:0.625rem;text-transform:uppercase;letter-spacing:0.2em;color:var(--text-secondary);margin-bottom:0.75rem;font-weight:700}
@@ -83,8 +83,9 @@ textarea{resize:vertical;min-height:56px}
 .input-hint{font-size:0.625rem;color:var(--text-muted);margin-top:0.25rem;font-family:"SF Mono",monospace}
 select{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23c5cdd8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 0.75rem center;padding-right:2rem}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem}
-.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.5rem}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.375rem}
+@media(max-width:420px){.grid-3{grid-template-columns:1fr 1fr;gap:0.375rem}.grid-4{grid-template-columns:1fr 1fr;gap:0.375rem}}
 
 /* PRICE PANEL */
 .price-grid{display:grid;grid-template-columns:1fr 1fr}
@@ -136,13 +137,13 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .profit-pos{color:var(--green)}.profit-neg{color:var(--red)}
 
 /* TOTALS */
-.total-card{border:1.5px solid var(--border);border-radius:0.75rem;background:var(--bg-input);padding:0.875rem;text-align:center}
-.total-label{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-secondary);margin-bottom:0.25rem;font-weight:500}
-.total-value{font-size:1.125rem;font-family:"SF Mono",monospace;font-weight:700;color:var(--text-primary)}
+.total-card{border:1.5px solid var(--border);border-radius:0.75rem;background:var(--bg-input);padding:0.625rem 0.5rem;text-align:center;min-width:0;overflow:hidden}
+.total-label{font-size:0.5rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-secondary);margin-bottom:0.25rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.total-value{font-size:0.875rem;font-family:"SF Mono",monospace;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .total-value.green{color:var(--green)}
 
 /* CHARTS */
-.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:0.75rem;padding:0.75rem}
+.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:0.75rem;padding:0.5rem;overflow:hidden}
 .chart-title{font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-secondary);margin-bottom:0.5rem;font-weight:600}
 .period-btn{padding:0.25rem 0.75rem;border-radius:9999px;font-size:0.625rem;font-weight:600;border:1px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer}
 .period-btn.active{background:var(--border-light);color:var(--text-primary);border-color:var(--accent)}
@@ -182,7 +183,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 .admin-user-pin{font-family:"SF Mono",monospace;font-size:0.75rem;color:var(--text-primary);background:rgba(255,255,255,0.08);padding:0.125rem 0.5rem;border-radius:0.25rem}
 .admin-actions{display:flex;gap:0.375rem;align-items:center}
 .filter-bar{display:flex;gap:0.375rem;margin-bottom:1rem;flex-wrap:wrap}
-.filter-chip{padding:0.375rem 0.75rem;border-radius:9999px;font-size:0.6875rem;font-weight:600;border:1.5px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;transition:all 0.2s}
+.filter-chip{padding:0.3125rem 0.625rem;border-radius:9999px;font-size:0.625rem;font-weight:600;border:1.5px solid var(--border);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;transition:all 0.2s;white-space:nowrap}
 .filter-chip.active{background:var(--border-light);color:var(--text-primary);border-color:var(--accent)}
 .empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted);font-size:0.875rem}
 .hidden{display:none!important}
@@ -301,10 +302,10 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
                 </div>
             </div>
             <div class="section">
-                <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;align-items:center">
-                    <input type="date" id="dashFrom" style="width:auto;padding:0.25rem 0.5rem;font-size:0.6875rem">
-                    <span style="color:var(--text-muted);font-size:0.6875rem">a</span>
-                    <input type="date" id="dashTo" style="width:auto;padding:0.25rem 0.5rem;font-size:0.6875rem">
+                <div style="display:flex;gap:0.375rem;margin-bottom:0.75rem;flex-wrap:wrap;align-items:center">
+                    <input type="date" id="dashFrom" style="flex:1;min-width:0;padding:0.25rem 0.375rem;font-size:0.625rem">
+                    <span style="color:var(--text-muted);font-size:0.625rem">a</span>
+                    <input type="date" id="dashTo" style="flex:1;min-width:0;padding:0.25rem 0.375rem;font-size:0.625rem">
                 </div>
                 <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap">
                     <div class="filter-chip dash-filt active" data-f="all">Todos</div>
@@ -704,9 +705,9 @@ function renderDashboard(){
         };
     });
 
-    $('dashOpTable').innerHTML='<div class="card">'+
-        '<div class="card-row" style="font-weight:600;font-size:0.625rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary)"><div style="flex:2">Operador</div><div style="flex:1;text-align:center">#</div><div style="flex:1.5;text-align:right">Gramos</div><div style="flex:1.5;text-align:right">Onzas</div><div style="flex:2;text-align:right">U. Neta</div><div style="flex:2;text-align:right">U. TRIA</div></div>'+
-        tableData.map(d=>`<div class="card-row"><div style="flex:2;font-size:0.75rem">${d.name}</div><div style="flex:1;text-align:center;font-family:monospace;font-size:0.75rem">${d.count}</div><div style="flex:1.5;text-align:right;font-family:monospace;font-size:0.75rem">${fN(d.gramos,0)}</div><div style="flex:1.5;text-align:right;font-family:monospace;font-size:0.75rem">${fN(d.gramos/CV,2)}</div><div style="flex:2;text-align:right;font-family:monospace;font-size:0.75rem;color:${d.uNeta>=0?'var(--green)':'var(--red)'}">${fC(d.uNeta)}</div><div style="flex:2;text-align:right;font-family:monospace;font-size:0.75rem">${fC(d.uTria)}</div></div>`).join('')+
+    $('dashOpTable').innerHTML='<div class="card" style="overflow-x:auto">'+
+        '<div class="card-row" style="font-weight:600;font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);min-width:0"><div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis">Operador</div><div style="flex:1;text-align:center">#</div><div style="flex:1.5;text-align:right">Gramos</div><div style="flex:2;text-align:right">U. Neta</div><div style="flex:2;text-align:right">U. TRIA</div></div>'+
+        tableData.map(d=>`<div class="card-row" style="min-width:0"><div style="flex:2;font-size:0.6875rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</div><div style="flex:1;text-align:center;font-family:monospace;font-size:0.6875rem">${d.count}</div><div style="flex:1.5;text-align:right;font-family:monospace;font-size:0.6875rem">${fN(d.gramos,0)}</div><div style="flex:2;text-align:right;font-family:monospace;font-size:0.6875rem;color:${d.uNeta>=0?'var(--green)':'var(--red)'}">${fC(d.uNeta)}</div><div style="flex:2;text-align:right;font-family:monospace;font-size:0.6875rem">${fC(d.uTria)}</div></div>`).join('')+
         '</div>';
 }
 $('dashFrom').onchange=renderDashboard;
