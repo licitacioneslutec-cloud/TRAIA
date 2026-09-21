@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TRIA Capital">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>TRIA Capital · Reporte Oro</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -408,6 +410,8 @@ const fN=(n,d=2)=>{if(n==null||isNaN(n))return'—';return new Intl.NumberFormat
 const pn=s=>{if(s===''||s==null)return 0;const v=parseFloat(String(s));return isNaN(v)?0:v};
 const tdy=()=>new Date().toISOString().split('T')[0];
 const $=id=>document.getElementById(id);
+function hashPin(pin){const s='TRIA_'+pin+'_CAP';let h1=0x811c9dc5,h2=0xcbf29ce4;for(let i=0;i<s.length;i++){h1^=s.charCodeAt(i);h1=Math.imul(h1,0x01000193);h2^=s.charCodeAt(i)+i+1;h2=Math.imul(h2,0x01000193)}return(h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0')}
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const show=el=>{if(typeof el==='string')el=$(el);el.classList.remove('hidden')};
 const hide=el=>{if(typeof el==='string')el=$(el);el.classList.add('hidden')};
 const tst=(m,t='success')=>{const e=$('toast');e.textContent=m;e.className='toast '+t;e.style.display='block';setTimeout(()=>e.style.display='none',2500)};
@@ -429,10 +433,14 @@ const DEF_USERS=[{name:'ADMINISTRADOR',pin:'0000',role:'admin'},{name:'DANIEL GI
 let users=[],reports=[],curUser=null,dolar=null,onza=null,hFilt='all';
 let dashFilt='all',dashProfitC=null,dashSpreadC=null,dashRoiC=null,dashCumC=null,dashOpC=null;
 let closings=[],alerts=[],editingId=null;
+let loginAttempts=0,loginLockUntil=0;
+let sessionTimer=null;
+function resetSession(){clearTimeout(sessionTimer);if(curUser)sessionTimer=setTimeout(()=>{curUser=null;hide('mainApp');show('loginScreen');$('loginPin').value='';$('loginUser').value='';tst('Sesión expirada por inactividad','error')},900000)}
 
 async function fbInit(){
     const s=await db.ref('users').once('value');
     if(!s.exists()){const b={};DEF_USERS.forEach((u,i)=>{const k='u'+(i+1);b[k]={...u,id:k}});await db.ref('users').set(b)}
+    const ms=await db.ref('users').once('value');const ud=ms.val()||{};const fix={};for(const[k,u]of Object.entries(ud)){const p=u.pin||'';const isPlain=p.length<=6&&/^\d+$/.test(p);const isCurrentHash=p.length===16&&/^[0-9a-f]+$/.test(p);if(!isPlain&&!isCurrentHash){const def=DEF_USERS.find(d=>d.name===u.name);fix['users/'+k+'/pin']=def?def.pin:'0000'}}if(Object.keys(fix).length)await db.ref().update(fix);
     db.ref('users').on('value',s=>{const d=s.val()||{};users=Object.values(d);if(curUser){if(curUser.role==='admin'){renderAdminUsers();renderAdminOps()}}});
     db.ref('reports').on('value',s=>{const d=s.val()||{};reports=Object.values(d);if(curUser){renderHistory();if($('cierreTab').classList.contains('active'))renderCierre()}});
     db.ref('closings').on('value',s=>{closings=Object.values(s.val()||{});if(curUser&&$('cierreTab').classList.contains('active'))renderCierre()});
@@ -441,22 +449,25 @@ async function fbInit(){
 
 // LOGIN
 $('loginBtn').onclick=async()=>{
+    if(Date.now()<loginLockUntil){$('loginError').textContent='Demasiados intentos. Espera '+Math.ceil((loginLockUntil-Date.now())/1000)+'s';return}
     const name=$('loginUser').value.trim().toUpperCase(),pin=$('loginPin').value;
     if(!name){$('loginError').textContent='Escribe tu nombre';return}
     if(!pin){$('loginError').textContent='Escribe tu PIN';return}
-    const s=await db.ref('users').once('value');users=Object.values(s.val()||{});
-    const u=users.find(x=>x.name.toUpperCase()===name&&x.pin===pin);
-    if(!u){$('loginError').textContent='Usuario o PIN incorrecto';return}
-    $('loginError').textContent='';curUser=u;enterApp();
+    const s=await db.ref('users').once('value');const raw=s.val()||{};users=Object.values(raw);
+    const hashed=hashPin(pin);let u=users.find(x=>x.name.toUpperCase()===name&&x.pin===hashed);
+    if(!u){u=users.find(x=>x.name.toUpperCase()===name&&x.pin===pin);if(u){await db.ref('users/'+u.id+'/pin').set(hashed);u.pin=hashed}}
+    if(!u){$('loginError').textContent='Usuario o PIN incorrecto';loginAttempts++;if(loginAttempts>=5){loginLockUntil=Date.now()+30000;loginAttempts=0}return}
+    $('loginError').textContent='';loginAttempts=0;loginLockUntil=0;curUser=u;enterApp();
 };
 $('loginPin').onkeydown=e=>{if(e.key==='Enter')$('loginBtn').click()};
 $('loginUser').onkeydown=e=>{if(e.key==='Enter')$('loginPin').focus()};
-$('logoutBtn').onclick=()=>{curUser=null;hide('mainApp');show('loginScreen');$('loginPin').value='';$('loginUser').value='';$('loginError').textContent=''};
+$('logoutBtn').onclick=()=>{clearTimeout(sessionTimer);curUser=null;hide('mainApp');show('loginScreen');$('loginPin').value='';$('loginUser').value='';$('loginError').textContent=''};
 
 function enterApp(){
     hide('loginScreen');show('mainApp');
+    resetSession();document.addEventListener('click',resetSession);
     const isA=curUser.role==='admin';
-    $('headerUser').innerHTML=curUser.name+(isA?'<span class="header-badge">ADMIN</span>':'');
+    $('headerUser').innerHTML=esc(curUser.name)+(isA?'<span class="header-badge">ADMIN</span>':'');
     const bar=$('tabBar');
     if(isA){
         bar.className='tab-bar tabs-6';
@@ -555,14 +566,14 @@ function renderHistory(){
     const vis=getVis();
     $('tR').textContent=vis.length;$('tG').textContent=fN(vis.reduce((s,r)=>s+(r.gramos||0),0),0);$('tOz').textContent=fN(vis.reduce((s,r)=>s+(r.gramos||0),0)/CV,2);$('tU').textContent=fC(vis.reduce((s,r)=>s+(r.uTria||0),0));
     const fb=$('filtBar'),ops=users.filter(u=>u.role==='operador');
-    fb.innerHTML=`<div class="filter-chip ${hFilt==='all'?'active':''}" data-f="all">Todos</div>`+ops.map(o=>`<div class="filter-chip ${hFilt===o.id?'active':''}" data-f="${o.id}">${o.name}</div>`).join('');
+    fb.innerHTML=`<div class="filter-chip ${hFilt==='all'?'active':''}" data-f="all">Todos</div>`+ops.map(o=>`<div class="filter-chip ${hFilt===o.id?'active':''}" data-f="${o.id}">${esc(o.name)}</div>`).join('');
     fb.querySelectorAll('.filter-chip').forEach(c=>c.onclick=()=>{hFilt=c.dataset.f;renderHistory()});
     const l=$('histList');
     if(!vis.length){l.innerHTML='<div class="empty-state">No hay reportes</div>';return}
     l.innerHTML=vis.slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).map(r=>`
         <div class="history-item" onclick="openDet('${r.id}')">
-            <div class="history-header"><div class="history-badges"><span class="badge">${r.operador}</span>${r.closingId?'<span class="badge-closed">CERRADO</span>':''}<span class="badge-date">${r.fecha}${r.hora?' · '+r.hora:''}</span></div></div>
-            <div class="history-body"><div><div class="history-grams">${r.gramosBruto?fN(r.gramosBruto,2)+' g bruto → ':''}${fN(r.gramos,2)} g fino · ${fN(r.gramos/CV,4)} oz</div>${r.proveedor?'<div class="history-prov">'+r.proveedor+'</div>':''}</div><div style="text-align:right"><div class="history-profit ${r.uNeta>=0?'profit-pos':'profit-neg'}">${fC(r.uNeta)}</div><div class="history-profit-label">U. Neta</div></div></div>
+            <div class="history-header"><div class="history-badges"><span class="badge">${esc(r.operador)}</span>${r.closingId?'<span class="badge-closed">CERRADO</span>':''}<span class="badge-date">${esc(r.fecha)}${r.hora?' · '+esc(r.hora):''}</span></div></div>
+            <div class="history-body"><div><div class="history-grams">${r.gramosBruto?fN(r.gramosBruto,2)+' g bruto → ':''}${fN(r.gramos,2)} g fino · ${fN(r.gramos/CV,4)} oz</div>${r.proveedor?'<div class="history-prov">'+esc(r.proveedor)+'</div>':''}</div><div style="text-align:right"><div class="history-profit ${r.uNeta>=0?'profit-pos':'profit-neg'}">${fC(r.uNeta)}</div><div class="history-profit-label">U. Neta</div></div></div>
         </div>`).join('');
 }
 
@@ -572,7 +583,7 @@ window.openDet=id=>{
     $('dT1').textContent=r.operador+' · '+r.fecha+(r.hora?' · '+r.hora:'');$('dT2').textContent=(r.gramosBruto?fN(r.gramosBruto,2)+' g bruto → ':'')+fN(r.gramos,2)+' g fino · '+fN(r.gramos/CV,4)+' oz';
     let h='';
     if(r.closingId)h+=`<div style="margin-bottom:0.75rem;text-align:center"><span class="badge-closed" style="font-size:0.625rem;padding:0.25rem 0.75rem">CERRADO</span></div>`;
-    if(r.proveedor)h+=`<div style="margin-bottom:1rem"><div class="field-label">Proveedor</div><div style="font-size:0.875rem">${r.proveedor}</div></div>`;
+    if(r.proveedor)h+=`<div style="margin-bottom:1rem"><div class="field-label">Proveedor</div><div style="font-size:0.875rem">${esc(r.proveedor)}</div></div>`;
     const rows=[];
     if(r.gramosBruto)rows.push(['Gramos Bruto',fN(r.gramosBruto,2)+' g']);
     if(r.ley)rows.push(['Ley',fN(r.ley,3)]);
@@ -580,10 +591,10 @@ window.openDet=id=>{
     rows.push(['Gramos Fino',fN(r.gramos,2)+' g'],['Dólar',fC(r.dolar)],['Onza USD',fU(r.onza)],['Cierre',fC(r.cierre)],['Gramo 100%',fC(r.gr100)],['Gramo cierre ('+r.porcRegalias+'%)',fC(r.grCierre)],['Equiv. onzas troy',fN(r.gramos/CV,4)+' oz'],['Precio cierre',fC(r.pCierre)],['Precio compra/g',fC(r.pCompra)],['Valor compra',fC(r.vCompra)],['Utilidad bruta',fC(r.uBruta)],['Gastos',fC(r.gastos)],['Utilidad neta',fC(r.uNeta)]);
     h+='<div class="card">'+rows.map(([l,v])=>`<div class="card-row ${l.includes('Gramo cierre')?'row-accent':''} ${l==='Utilidad neta'?'row-bold':''}"><div class="card-row-label">${l}</div><div class="card-row-value">${v}</div></div>`).join('')+'</div>';
     const rpo=r.pctOperador!=null?r.pctOperador:50,rpt=100-rpo;
-    h+=`<div class="split-grid" style="margin-top:1rem"><div class="split-card" style="border-color:var(--green-bd);background:var(--green-bg)"><div class="split-card-label" style="color:var(--green)">U · ${r.operador} (${rpo}%)</div><div class="split-card-value" style="color:var(--green)">${fC(r.uOperador)}</div></div><div class="split-card" style="border-color:var(--border-light);background:rgba(255,255,255,0.04)"><div class="split-card-label" style="color:var(--text-primary)">U · TRIA (${rpt}%)</div><div class="split-card-value" style="color:var(--text-primary)">${fC(r.uTria)}</div></div></div>`;
+    h+=`<div class="split-grid" style="margin-top:1rem"><div class="split-card" style="border-color:var(--green-bd);background:var(--green-bg)"><div class="split-card-label" style="color:var(--green)">U · ${esc(r.operador)} (${rpo}%)</div><div class="split-card-value" style="color:var(--green)">${fC(r.uOperador)}</div></div><div class="split-card" style="border-color:var(--border-light);background:rgba(255,255,255,0.04)"><div class="split-card-label" style="color:var(--text-primary)">U · TRIA (${rpt}%)</div><div class="split-card-value" style="color:var(--text-primary)">${fC(r.uTria)}</div></div></div>`;
     if(rpo!==50)h+=`<div style="text-align:center;font-size:0.5625rem;color:var(--text-muted);margin-top:0.25rem">Gastos (${fC(r.gastos)}) aplicados solo sobre utilidad operador</div>`;
-    if(r.comentarios)h+=`<div style="margin-top:1rem;padding:0.75rem;border:1px solid var(--border);border-radius:0.75rem;background:var(--bg-input)"><div class="field-label">Comentarios</div><div style="font-size:0.8125rem;margin-top:0.25rem">${r.comentarios}</div></div>`;
-    if(r.creadoPor&&r.creadoPor!==r.operador)h+=`<div style="text-align:center;font-size:0.625rem;color:var(--text-muted);margin-top:0.75rem">Creado por ${r.creadoPor}</div>`;
+    if(r.comentarios)h+=`<div style="margin-top:1rem;padding:0.75rem;border:1px solid var(--border);border-radius:0.75rem;background:var(--bg-input)"><div class="field-label">Comentarios</div><div style="font-size:0.8125rem;margin-top:0.25rem">${esc(r.comentarios)}</div></div>`;
+    if(r.creadoPor&&r.creadoPor!==r.operador)h+=`<div style="text-align:center;font-size:0.625rem;color:var(--text-muted);margin-top:0.75rem">Creado por ${esc(r.creadoPor)}</div>`;
     h+=`<div style="text-align:center;font-size:0.625rem;color:var(--text-muted);margin-top:0.5rem">${new Date(r.createdAt).toLocaleString('es-CO')}</div>`;
     if(curUser.role==='admin'||r.odId===curUser.id){
         h+=`<button onclick="editRep('${r.id}')" class="btn btn-secondary" style="margin-top:1rem">${ICONS.edit}Editar</button>`;
@@ -628,13 +639,13 @@ $('expBtn').onclick=()=>{
 };
 
 // CHANGE PIN
-$('chPinBtn').onclick=async()=>{if($('pinA').value!==curUser.pin){tst('PIN incorrecto','error');return}if(!/^\d{4}$/.test($('pinN').value)){tst('4 dígitos','error');return}await db.ref('users/'+curUser.id+'/pin').set($('pinN').value);curUser.pin=$('pinN').value;$('pinA').value='';$('pinN').value='';tst('PIN cambiado')};
+$('chPinBtn').onclick=async()=>{const ha=hashPin($('pinA').value);if(ha!==curUser.pin&&$('pinA').value!==curUser.pin){tst('PIN incorrecto','error');return}if(!/^\d{4}$/.test($('pinN').value)){tst('4 dígitos','error');return}const nh=hashPin($('pinN').value);await db.ref('users/'+curUser.id+'/pin').set(nh);curUser.pin=nh;$('pinA').value='';$('pinN').value='';tst('PIN cambiado')};
 
 // ADMIN
 function renderAdminUsers(){
     $('admUL').innerHTML=users.map(u=>`
-        <div class="admin-user-item"><div><div class="admin-user-name">${u.name}</div><div class="admin-user-role">${u.role==='admin'?'Admin':'Operador'}</div></div>
-        <div class="admin-actions"><span class="admin-user-pin">${u.pin}</span>
+        <div class="admin-user-item"><div><div class="admin-user-name">${esc(u.name)}</div><div class="admin-user-role">${u.role==='admin'?'Admin':'Operador'}</div></div>
+        <div class="admin-actions"><span class="admin-user-pin">••••</span>
         <button onclick="edUPin('${u.id}')" class="edit-btn" style="font-size:0.875rem">${ICONS.edit}</button>
         <button onclick="edUName('${u.id}')" class="edit-btn" style="font-size:0.875rem">${ICONS.editName}</button>
         ${users.length>1?`<button onclick="delU('${u.id}')" class="edit-btn" style="font-size:0.875rem;color:var(--red)">${ICONS.trash}</button>`:''}</div></div>`).join('');
@@ -643,12 +654,12 @@ $('addUBtn').onclick=async()=>{
     const name=$('nwUN').value.trim().toUpperCase(),pin=$('nwUP').value,role=$('nwUR').value;
     if(!name){tst('Nombre','error');return}if(!/^\d{4}$/.test(pin)){tst('PIN: 4 dígitos','error');return}
     if(users.find(u=>u.name===name)){tst('Ya existe','error');return}
-    const id='u'+Date.now();await db.ref('users/'+id).set({id,name,pin,role});
+    const id='u'+Date.now();const hp=await hashPin(pin);await db.ref('users/'+id).set({id,name,pin:hp,role});
     $('nwUN').value='';$('nwUP').value='';tst('Usuario agregado');
 };
-window.edUPin=id=>{const u=users.find(x=>x.id===id);if(!u)return;$('epU').textContent=u.name;$('epI').value=u.pin;$('epModal').classList.add('active');$('epS').onclick=async()=>{if(!/^\d{4}$/.test($('epI').value)){tst('4 dígitos','error');return}await db.ref('users/'+id+'/pin').set($('epI').value);if(id===curUser.id)curUser.pin=$('epI').value;$('epModal').classList.remove('active');tst('PIN actualizado')}};
+window.edUPin=id=>{const u=users.find(x=>x.id===id);if(!u)return;$('epU').textContent=u.name;$('epI').value='';$('epModal').classList.add('active');$('epS').onclick=async()=>{if(!/^\d{4}$/.test($('epI').value)){tst('4 dígitos','error');return}const hp=await hashPin($('epI').value);await db.ref('users/'+id+'/pin').set(hp);if(id===curUser.id)curUser.pin=hp;$('epModal').classList.remove('active');tst('PIN actualizado')}};
 $('clEP').onclick=()=>$('epModal').classList.remove('active');$('epModal').onclick=e=>{if(e.target===$('epModal'))$('epModal').classList.remove('active')};
-window.edUName=async id=>{const u=users.find(x=>x.id===id);if(!u)return;const nn=prompt('Nuevo nombre:',u.name);if(!nn||!nn.trim())return;const name=nn.trim().toUpperCase();await db.ref('users/'+id+'/name').set(name);const s=await db.ref('reports').orderByChild('odId').equalTo(id).once('value');const up={};s.forEach(c=>{up[c.key+'/operador']=name});if(Object.keys(up).length)await db.ref('reports').update(up);if(id===curUser.id){curUser.name=name;$('headerUser').innerHTML=name+(curUser.role==='admin'?'<span class="header-badge">ADMIN</span>':'');$('profN').textContent=name}tst('Nombre actualizado')};
+window.edUName=id=>{const u=users.find(x=>x.id===id);if(!u)return;$('epU').textContent='Cambiar nombre: '+u.name;$('epI').value=u.name;$('epI').type='text';$('epI').maxLength=50;$('epI').removeAttribute('inputmode');$('epModal').querySelector('.modal-title-small').textContent='Cambiar Nombre';$('epModal').classList.add('active');$('epS').onclick=async()=>{const nn=$('epI').value.trim().toUpperCase();if(!nn){tst('Nombre vacío','error');return}await db.ref('users/'+id+'/name').set(nn);const s=await db.ref('reports').orderByChild('odId').equalTo(id).once('value');const up={};s.forEach(c=>{up[c.key+'/operador']=nn});if(Object.keys(up).length)await db.ref('reports').update(up);if(id===curUser.id){curUser.name=nn;$('headerUser').innerHTML=esc(nn)+(curUser.role==='admin'?'<span class="header-badge">ADMIN</span>':'');$('profN').textContent=nn}$('epModal').classList.remove('active');$('epI').type='text';$('epI').maxLength=4;$('epI').setAttribute('inputmode','numeric');$('epModal').querySelector('.modal-title-small').textContent='Cambiar PIN';tst('Nombre actualizado')}};
 window.delU=async id=>{const u=users.find(x=>x.id===id);if(!u)return;if(id===curUser.id){tst('No puedes eliminarte','error');return}if(!confirm('¿Eliminar a '+u.name+'?'))return;await db.ref('users/'+id).remove();tst('Eliminado')};
 
 // CIERRE
@@ -665,7 +676,7 @@ function renderCierre(){
     const l=$('cierreList');
     if(!open.length){l.innerHTML='<div class="empty-state">No hay reportes abiertos</div>';$('cierreBtn').disabled=true;hide('cierreWarn');hide('cierreMixWarn');$('cSel').textContent='0';$('cGrams').textContent='0';$('cUN').textContent='—';renderCierreHist();return}
     l.innerHTML=keys.map(k=>`<div class="cierre-group"><div class="cierre-group-header">Ley ${k} · ${groups[k].length} reportes · ${fN(groups[k].reduce((s,r)=>s+(r.gramos||0),0),2)} g fino</div>`+
-        groups[k].slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).map(r=>`<label class="cierre-item"><input type="checkbox" class="cierre-chk" data-id="${r.id}" data-ley="${r.ley||0}" data-g="${r.gramos||0}" data-un="${r.uNeta||0}"><div class="cierre-item-body"><div class="history-badges"><span class="badge">${r.operador}</span><span class="badge-date">${r.fecha}${r.hora?' · '+r.hora:''}</span></div><div style="margin-top:0.375rem;display:flex;justify-content:space-between"><div class="history-grams">${r.gramosBruto?fN(r.gramosBruto,2)+' g bruto → ':'' }${fN(r.gramos,2)} g fino</div><div class="history-profit ${r.uNeta>=0?'profit-pos':'profit-neg'}">${fC(r.uNeta)}</div></div>${r.proveedor?'<div class="history-prov">'+r.proveedor+'</div>':''}</div></label>`).join('')+'</div>').join('');
+        groups[k].slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).map(r=>`<label class="cierre-item"><input type="checkbox" class="cierre-chk" data-id="${r.id}" data-ley="${r.ley||0}" data-g="${r.gramos||0}" data-un="${r.uNeta||0}"><div class="cierre-item-body"><div class="history-badges"><span class="badge">${esc(r.operador)}</span><span class="badge-date">${esc(r.fecha)}${r.hora?' · '+esc(r.hora):''}</span></div><div style="margin-top:0.375rem;display:flex;justify-content:space-between"><div class="history-grams">${r.gramosBruto?fN(r.gramosBruto,2)+' g bruto → ':'' }${fN(r.gramos,2)} g fino</div><div class="history-profit ${r.uNeta>=0?'profit-pos':'profit-neg'}">${fC(r.uNeta)}</div></div>${r.proveedor?'<div class="history-prov">'+esc(r.proveedor)+'</div>':''}</div></label>`).join('')+'</div>').join('');
     l.querySelectorAll('.cierre-chk').forEach(c=>c.onchange=updateCierreTotal);
     updateCierreTotal();
     renderCierreHist();
@@ -704,9 +715,9 @@ function renderCierreHist(){
         const missing=c.reportIds?(c.reportIds.length-reps.length):0;
         const leyTxt=c.leyMixed?'Mixta':(c.ley!=null?'Ley '+fN(c.ley,3):'Sin ley');
         const canUndo=curUser.role==='admin'||c.creadoPor===curUser.name;
-        return`<div class="closing-card"><div class="closing-card-header"><div><div style="font-size:0.875rem;font-weight:700">${fN(c.totalGramosFino,2)} g fino</div><div style="font-size:0.625rem;color:var(--text-secondary)">${c.fecha} · ${leyTxt} · ${c.reportIds?c.reportIds.length:0} reportes · por ${c.creadoPor}</div></div><div style="text-align:right"><div class="history-profit ${c.totalUNeta>=0?'profit-pos':'profit-neg'}">${fC(c.totalUNeta)}</div><div style="font-size:0.5625rem;color:var(--text-secondary)">U. Neta</div></div></div>`+
+        return`<div class="closing-card"><div class="closing-card-header"><div><div style="font-size:0.875rem;font-weight:700">${fN(c.totalGramosFino,2)} g fino</div><div style="font-size:0.625rem;color:var(--text-secondary)">${esc(c.fecha)} · ${leyTxt} · ${c.reportIds?c.reportIds.length:0} reportes · por ${esc(c.creadoPor)}</div></div><div style="text-align:right"><div class="history-profit ${c.totalUNeta>=0?'profit-pos':'profit-neg'}">${fC(c.totalUNeta)}</div><div style="font-size:0.5625rem;color:var(--text-secondary)">U. Neta</div></div></div>`+
         `<div class="split-grid" style="margin-top:0.5rem"><div class="split-card"><div class="split-card-label">U. Operador</div><div class="split-card-value">${fC(c.totalUOperador)}</div></div><div class="split-card"><div class="split-card-label">U. TRIA</div><div class="split-card-value">${fC(c.totalUTria)}</div></div></div>`+
-        (reps.length?`<div style="margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.5rem">${reps.map(r=>`<div style="display:flex;justify-content:space-between;padding:0.25rem 0;font-size:0.6875rem"><span style="color:var(--text-secondary)">${r.operador} · ${r.fecha}</span><span class="mono">${fN(r.gramos,2)} g · ${fC(r.uNeta)}</span></div>`).join('')}${missing?`<div style="font-size:0.625rem;color:var(--text-muted);margin-top:0.25rem">${missing} reporte(s) eliminado(s)</div>`:''}</div>`:'')+
+        (reps.length?`<div style="margin-top:0.75rem;border-top:1px solid var(--border);padding-top:0.5rem">${reps.map(r=>`<div style="display:flex;justify-content:space-between;padding:0.25rem 0;font-size:0.6875rem"><span style="color:var(--text-secondary)">${esc(r.operador)} · ${esc(r.fecha)}</span><span class="mono">${fN(r.gramos,2)} g · ${fC(r.uNeta)}</span></div>`).join('')}${missing?`<div style="font-size:0.625rem;color:var(--text-muted);margin-top:0.25rem">${missing} reporte(s) eliminado(s)</div>`:''}</div>`:'')+
         (canUndo?`<button onclick="undoClosing('${c.id}')" class="btn btn-secondary" style="margin-top:0.75rem;padding:0.5rem;font-size:0.75rem">Deshacer cierre</button>`:'')+
         `</div>`}).join('');
 }
@@ -757,7 +768,7 @@ function renderDashboard(){
     const fb=document.querySelector('#dashTab .dash-filt')?.parentNode;
     if(fb){
         fb.innerHTML=`<div class="filter-chip dash-filt ${dashFilt==='all'?'active':''}" data-f="all">Todos</div>`+
-            ops.map(o=>`<div class="filter-chip dash-filt ${dashFilt===o.id?'active':''}" data-f="${o.id}">${o.name}</div>`).join('');
+            ops.map(o=>`<div class="filter-chip dash-filt ${dashFilt===o.id?'active':''}" data-f="${o.id}">${esc(o.name)}</div>`).join('');
         fb.querySelectorAll('.dash-filt').forEach(c=>c.onclick=()=>{dashFilt=c.dataset.f;renderDashboard()});
     }
 
@@ -855,13 +866,14 @@ function renderDashboard(){
 
     $('dashOpTable').innerHTML='<div class="card" style="overflow-x:auto">'+
         '<div class="card-row" style="font-weight:600;font-size:0.5625rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);min-width:0"><div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis">Operador</div><div style="flex:1;text-align:center">#</div><div style="flex:1.5;text-align:right">Gramos</div><div style="flex:2;text-align:right">U. Neta</div><div style="flex:2;text-align:right">U. TRIA</div></div>'+
-        tableData.map(d=>`<div class="card-row" style="min-width:0"><div style="flex:2;font-size:0.6875rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</div><div style="flex:1;text-align:center;font-family:monospace;font-size:0.6875rem">${d.count}</div><div style="flex:1.5;text-align:right;font-family:monospace;font-size:0.6875rem">${fN(d.gramos,0)}</div><div style="flex:2;text-align:right;font-family:monospace;font-size:0.6875rem;color:${d.uNeta>=0?'var(--green)':'var(--red)'}">${fC(d.uNeta)}</div><div style="flex:2;text-align:right;font-family:monospace;font-size:0.6875rem">${fC(d.uTria)}</div></div>`).join('')+
+        tableData.map(d=>`<div class="card-row" style="min-width:0"><div style="flex:2;font-size:0.6875rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.name)}</div><div style="flex:1;text-align:center;font-family:monospace;font-size:0.6875rem">${d.count}</div><div style="flex:1.5;text-align:right;font-family:monospace;font-size:0.6875rem">${fN(d.gramos,0)}</div><div style="flex:2;text-align:right;font-family:monospace;font-size:0.6875rem;color:${d.uNeta>=0?'var(--green)':'var(--red)'}">${fC(d.uNeta)}</div><div style="flex:2;text-align:right;font-family:monospace;font-size:0.6875rem">${fC(d.uTria)}</div></div>`).join('')+
         '</div>';
 }
 $('dashFrom').onchange=renderDashboard;
 $('dashTo').onchange=renderDashboard;
 
 fbInit();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script>
 </body>
 </html>

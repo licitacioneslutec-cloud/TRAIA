@@ -1,0 +1,23 @@
+{
+  "_comment": "Aplicar en Firebase Console > Realtime Database > Rules. REQUIERE activar Firebase Authentication.",
+  "rules": {
+    "users": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "reports": {
+      ".read": "auth != null",
+      "$rid": {
+        ".write": "auth != null && (data.child('odId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || !data.exists())"
+      }
+    },
+    "closings": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "alerts": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
