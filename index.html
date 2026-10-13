@@ -14,6 +14,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <style>
 :root{--bg-darkest:#070e1a;--bg-dark:#0a1628;--bg-card:#0f1f35;--bg-card-hover:#142a45;--bg-input:#0c1829;--border:#1a3050;--border-light:#243d5c;--text-primary:#e8ecf2;--text-secondary:#8a9bb5;--text-muted:#5a6f8a;--accent:#c5cdd8;--green:#2ecc71;--green-bg:rgba(46,204,113,0.1);--green-bd:rgba(46,204,113,0.3);--red:#e74c3c;--red-bg:rgba(231,76,60,0.1);--red-bd:rgba(231,76,60,0.3)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -224,6 +225,20 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
     </div>
 </div>
 
+<div id="forceChangePinScreen" class="login-screen hidden">
+    <div class="login-logo-wrap">
+        <svg width="80" height="48" viewBox="0 0 120 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 40L26 16L42 40L26 64Z" fill="white" fill-opacity="0.95"/><path d="M42 40L58 16L74 40L58 64Z" fill="white" fill-opacity="0.55"/><path d="M74 40L90 16L106 40L90 64Z" fill="white" fill-opacity="0.3"/></svg>
+        <div class="login-subtitle" style="margin-top:1rem">Cambio de PIN obligatorio</div>
+    </div>
+    <div class="login-box">
+        <div style="font-size:0.75rem;color:var(--text-secondary);text-align:center;margin-bottom:1rem;line-height:1.5">Debes cambiar tu PIN temporal antes de continuar.</div>
+        <div class="login-field"><label class="login-label">PIN actual</label><input type="password" id="fcpOld" class="login-input pin" maxlength="4" inputmode="numeric" placeholder="····" autocomplete="off"></div>
+        <div class="login-field"><label class="login-label">Nuevo PIN</label><input type="password" id="fcpNew" class="login-input pin" maxlength="4" inputmode="numeric" placeholder="····" autocomplete="off"></div>
+        <button id="fcpBtn" class="login-btn">Cambiar PIN</button>
+        <div id="fcpError" class="login-error"></div>
+    </div>
+</div>
+
 <!-- MAIN -->
 <div id="mainApp" class="hidden">
     <div class="header">
@@ -386,6 +401,7 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
         <div id="adminTab" class="tab-content">
             <div class="section"><div class="section-label">Usuarios</div><div id="admUL"></div></div>
             <div class="section"><div class="section-label">Agregar usuario</div><div class="grid-2"><div class="field"><div class="field-label">Nombre</div><input type="text" id="nwUN" placeholder="Nombre" autocapitalize="characters"></div><div class="field"><div class="field-label">PIN</div><input type="text" id="nwUP" maxlength="4" inputmode="numeric" class="mono" placeholder="0000"></div></div><div class="field"><div class="field-label">Rol</div><select id="nwUR"><option value="operador">Operador</option><option value="admin">Administrador</option></select></div><button id="addUBtn" class="btn btn-primary">Agregar usuario</button></div>
+            <div class="section"><div class="card" style="padding:1rem;font-size:0.6875rem;color:var(--text-secondary);line-height:1.6"><div style="color:var(--text-primary);font-weight:600;margin-bottom:0.5rem">Resetear PIN o eliminar usuarios</div>Para resetear el PIN de otro usuario o eliminarlo, usa <a href="https://console.firebase.google.com/project/traia-capital/authentication/users" target="_blank" style="color:var(--accent);text-decoration:underline">Firebase Console → Authentication</a>.</div></div>
         </div>
     </div>
     <div class="tab-bar tabs-3" id="tabBar">
@@ -397,12 +413,19 @@ select{-webkit-appearance:none;appearance:none;background-image:url("data:image/
 
 <!-- MODALS -->
 <div id="detModal" class="modal"><div class="modal-content"><div class="modal-header"><div><div class="modal-title-small" id="dT1">—</div><div class="modal-title" id="dT2">—</div></div><button class="close-btn" id="clDet"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body" id="dBody"></div></div></div>
-<div id="epModal" class="modal"><div class="modal-content"><div class="modal-header"><div><div class="modal-title-small">Cambiar PIN</div><div class="modal-title" id="epU">—</div></div><button class="close-btn" id="clEP"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body"><div class="field"><div class="field-label">Nuevo PIN</div><input type="text" id="epI" maxlength="4" inputmode="numeric" class="mono"></div><button id="epS" class="btn btn-primary">Guardar</button></div></div></div>
 </div>
 <div id="toast" class="toast" style="display:none"></div>
 
 <script>
-firebase.initializeApp({databaseURL:"https://traia-capital-default-rtdb.firebaseio.com"});
+firebase.initializeApp({
+  apiKey:"AIzaSyArJBt5dewwdRHQm6-_WyAuoDAEuUXB6IY",
+  authDomain:"traia-capital.firebaseapp.com",
+  databaseURL:"https://traia-capital-default-rtdb.firebaseio.com",
+  projectId:"traia-capital",
+  storageBucket:"traia-capital.firebasestorage.app",
+  messagingSenderId:"192726252855",
+  appId:"1:192726252855:web:d46173df0ae6b8ea97aeb2"
+});
 const db=firebase.database();
 const CV=31.1035;
 const fC=n=>{if(n==null||isNaN(n))return'—';return new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n)};
@@ -411,7 +434,7 @@ const fN=(n,d=2)=>{if(n==null||isNaN(n))return'—';return new Intl.NumberFormat
 const pn=s=>{if(s===''||s==null)return 0;const v=parseFloat(String(s));return isNaN(v)?0:v};
 const tdy=()=>new Date().toISOString().split('T')[0];
 const $=id=>document.getElementById(id);
-function hashPin(pin){const s='TRIA_'+pin+'_CAP';let h1=0x811c9dc5,h2=0xcbf29ce4;for(let i=0;i<s.length;i++){h1^=s.charCodeAt(i);h1=Math.imul(h1,0x01000193);h2^=s.charCodeAt(i)+i+1;h2=Math.imul(h2,0x01000193)}return(h1>>>0).toString(16).padStart(8,'0')+(h2>>>0).toString(16).padStart(8,'0')}
+const slug=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const show=el=>{if(typeof el==='string')el=$(el);el.classList.remove('hidden')};
 const hide=el=>{if(typeof el==='string')el=$(el);el.classList.add('hidden')};
@@ -430,19 +453,14 @@ const ICONS={
     cierre:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'
 };
 
-const DEF_USERS=[{name:'ADMINISTRADOR',pin:'0000',role:'admin'},{name:'DANIEL GIRALDO',pin:'1234',role:'operador'},{name:'OPERADOR 2',pin:'5678',role:'operador'},{name:'OPERADOR 3',pin:'9012',role:'operador'}];
 let users=[],reports=[],curUser=null,dolar=null,onza=null,hFilt='all';
 let dashFilt='all',dashProfitC=null,dashSpreadC=null,dashRoiC=null,dashCumC=null,dashOpC=null;
 let closings=[],alerts=[],editingId=null;
 let editingClosingId=null;
-let loginAttempts=0,loginLockUntil=0;
 let sessionTimer=null;
-function resetSession(){clearTimeout(sessionTimer);if(curUser)sessionTimer=setTimeout(()=>{curUser=null;hide('mainApp');show('loginScreen');$('loginPin').value='';$('loginUser').value='';tst('Sesión expirada por inactividad','error')},900000)}
+function resetSession(){clearTimeout(sessionTimer);if(curUser)sessionTimer=setTimeout(()=>{firebase.auth().signOut();tst('Sesión expirada por inactividad','error')},900000)}
 
 async function fbInit(){
-    const s=await db.ref('users').once('value');
-    if(!s.exists()){const b={};DEF_USERS.forEach((u,i)=>{const k='u'+(i+1);b[k]={...u,id:k}});await db.ref('users').set(b)}
-    const ms=await db.ref('users').once('value');const ud=ms.val()||{};const fix={};for(const[k,u]of Object.entries(ud)){const p=u.pin||'';const isPlain=p.length<=6&&/^\d+$/.test(p);const isCurrentHash=p.length===16&&/^[0-9a-f]+$/.test(p);if(!isPlain&&!isCurrentHash){const def=DEF_USERS.find(d=>d.name===u.name);fix['users/'+k+'/pin']=def?def.pin:'0000'}}if(Object.keys(fix).length)await db.ref().update(fix);
     db.ref('users').on('value',s=>{const d=s.val()||{};users=Object.values(d);if(curUser){if(curUser.role==='admin'){renderAdminUsers();renderAdminOps()}}});
     db.ref('reports').on('value',s=>{const d=s.val()||{};reports=Object.values(d);if(curUser){renderHistory();if($('cierreTab').classList.contains('active')&&!editingClosingId)renderCierre()}});
     db.ref('closings').on('value',s=>{closings=Object.values(s.val()||{});if(curUser&&$('cierreTab').classList.contains('active')&&!editingClosingId)renderCierre()});
@@ -451,19 +469,42 @@ async function fbInit(){
 
 // LOGIN
 $('loginBtn').onclick=async()=>{
-    if(Date.now()<loginLockUntil){$('loginError').textContent='Demasiados intentos. Espera '+Math.ceil((loginLockUntil-Date.now())/1000)+'s';return}
     const name=$('loginUser').value.trim().toUpperCase(),pin=$('loginPin').value;
     if(!name){$('loginError').textContent='Escribe tu nombre';return}
-    if(!pin){$('loginError').textContent='Escribe tu PIN';return}
-    const s=await db.ref('users').once('value');const raw=s.val()||{};users=Object.values(raw);
-    const hashed=hashPin(pin);let u=users.find(x=>x.name.toUpperCase()===name&&x.pin===hashed);
-    if(!u){u=users.find(x=>x.name.toUpperCase()===name&&x.pin===pin);if(u){await db.ref('users/'+u.id+'/pin').set(hashed);u.pin=hashed}}
-    if(!u){$('loginError').textContent='Usuario o PIN incorrecto';loginAttempts++;if(loginAttempts>=5){loginLockUntil=Date.now()+30000;loginAttempts=0}return}
-    $('loginError').textContent='';loginAttempts=0;loginLockUntil=0;curUser=u;enterApp();
+    if(!/^\d{4}$/.test(pin)){$('loginError').textContent='PIN de 4 dígitos';return}
+    $('loginError').textContent='';$('loginBtn').disabled=true;
+    try{
+        const email=slug(name)+'@tria.local';
+        await firebase.auth().signInWithEmailAndPassword(email,pin+'TRIA');
+    }catch(e){
+        $('loginError').textContent='Usuario o PIN incorrecto';
+    }finally{$('loginBtn').disabled=false}
 };
 $('loginPin').onkeydown=e=>{if(e.key==='Enter')$('loginBtn').click()};
 $('loginUser').onkeydown=e=>{if(e.key==='Enter')$('loginPin').focus()};
-$('logoutBtn').onclick=()=>{clearTimeout(sessionTimer);curUser=null;hide('mainApp');show('loginScreen');$('loginPin').value='';$('loginUser').value='';$('loginError').textContent=''};
+$('logoutBtn').onclick=()=>{clearTimeout(sessionTimer);firebase.auth().signOut();$('loginPin').value='';$('loginUser').value='';$('loginError').textContent=''};
+
+function forceChangePinFlow(){
+    hide('loginScreen');hide('mainApp');show('forceChangePinScreen');
+    $('fcpOld').value='';$('fcpNew').value='';$('fcpError').textContent='';
+    $('fcpBtn').onclick=async()=>{
+        const old=$('fcpOld').value,nw=$('fcpNew').value;
+        if(!/^\d{4}$/.test(old)||!/^\d{4}$/.test(nw)){$('fcpError').textContent='PIN de 4 dígitos';return}
+        if(old===nw){$('fcpError').textContent='El nuevo PIN debe ser diferente';return}
+        $('fcpBtn').disabled=true;
+        try{
+            const email=slug(curUser.name)+'@tria.local';
+            const cred=firebase.auth.EmailAuthProvider.credential(email,old+'TRIA');
+            await firebase.auth().currentUser.reauthenticateWithCredential(cred);
+            await firebase.auth().currentUser.updatePassword(nw+'TRIA');
+            await db.ref('users/'+curUser.id+'/mustChangePin').remove();
+            curUser.mustChangePin=false;
+            hide('forceChangePinScreen');enterApp();
+        }catch(e){
+            $('fcpError').textContent='PIN actual incorrecto';
+        }finally{$('fcpBtn').disabled=false}
+    };
+}
 
 function enterApp(){
     hide('loginScreen');show('mainApp');
@@ -643,28 +684,40 @@ $('expBtn').onclick=()=>{
 };
 
 // CHANGE PIN
-$('chPinBtn').onclick=async()=>{const ha=hashPin($('pinA').value);if(ha!==curUser.pin&&$('pinA').value!==curUser.pin){tst('PIN incorrecto','error');return}if(!/^\d{4}$/.test($('pinN').value)){tst('4 dígitos','error');return}const nh=hashPin($('pinN').value);await db.ref('users/'+curUser.id+'/pin').set(nh);curUser.pin=nh;$('pinA').value='';$('pinN').value='';tst('PIN cambiado')};
+$('chPinBtn').onclick=async()=>{
+    const old=$('pinA').value,nw=$('pinN').value;
+    if(!/^\d{4}$/.test(nw)){tst('4 dígitos','error');return}
+    try{
+        const email=slug(curUser.name)+'@tria.local';
+        const cred=firebase.auth.EmailAuthProvider.credential(email,old+'TRIA');
+        await firebase.auth().currentUser.reauthenticateWithCredential(cred);
+        await firebase.auth().currentUser.updatePassword(nw+'TRIA');
+        $('pinA').value='';$('pinN').value='';
+        tst('PIN cambiado');
+    }catch(e){tst('PIN actual incorrecto','error')}
+};
 
 // ADMIN
 function renderAdminUsers(){
     $('admUL').innerHTML=users.map(u=>`
-        <div class="admin-user-item"><div><div class="admin-user-name">${esc(u.name)}</div><div class="admin-user-role">${u.role==='admin'?'Admin':'Operador'}</div></div>
-        <div class="admin-actions"><span class="admin-user-pin">••••</span>
-        <button onclick="edUPin('${u.id}')" class="edit-btn" style="font-size:0.875rem">${ICONS.edit}</button>
-        <button onclick="edUName('${u.id}')" class="edit-btn" style="font-size:0.875rem">${ICONS.editName}</button>
-        ${users.length>1?`<button onclick="delU('${u.id}')" class="edit-btn" style="font-size:0.875rem;color:var(--red)">${ICONS.trash}</button>`:''}</div></div>`).join('');
+        <div class="admin-user-item"><div><div class="admin-user-name">${esc(u.name)}</div><div class="admin-user-role">${u.role==='admin'?'Admin':'Operador'}</div></div>${u.mustChangePin?'<span class="badge" style="color:var(--text-muted);font-size:0.5rem">PIN TEMPORAL</span>':''}</div>`).join('');
 }
 $('addUBtn').onclick=async()=>{
     const name=$('nwUN').value.trim().toUpperCase(),pin=$('nwUP').value,role=$('nwUR').value;
-    if(!name){tst('Nombre','error');return}if(!/^\d{4}$/.test(pin)){tst('PIN: 4 dígitos','error');return}
+    if(!name){tst('Nombre','error');return}
+    if(!/^\d{4}$/.test(pin)){tst('PIN: 4 dígitos','error');return}
     if(users.find(u=>u.name===name)){tst('Ya existe','error');return}
-    const id='u'+Date.now();const hp=await hashPin(pin);await db.ref('users/'+id).set({id,name,pin:hp,role});
-    $('nwUN').value='';$('nwUP').value='';tst('Usuario agregado');
+    const email=slug(name)+'@tria.local';
+    const cfg={apiKey:"AIzaSyArJBt5dewwdRHQm6-_WyAuoDAEuUXB6IY",authDomain:"traia-capital.firebaseapp.com",databaseURL:"https://traia-capital-default-rtdb.firebaseio.com"};
+    const sec=firebase.apps.find(a=>a.name==='adm')||firebase.initializeApp(cfg,'adm');
+    try{
+        const c=await sec.auth().createUserWithEmailAndPassword(email,pin+'TRIA');
+        await db.ref('users/'+c.user.uid).set({name,role,mustChangePin:true});
+        await sec.auth().signOut();
+        $('nwUN').value='';$('nwUP').value='';
+        tst('Usuario agregado');
+    }catch(e){tst('Error: '+(e.code||e.message),'error')}
 };
-window.edUPin=id=>{const u=users.find(x=>x.id===id);if(!u)return;$('epU').textContent=u.name;$('epI').value='';$('epModal').classList.add('active');$('epS').onclick=async()=>{if(!/^\d{4}$/.test($('epI').value)){tst('4 dígitos','error');return}const hp=await hashPin($('epI').value);await db.ref('users/'+id+'/pin').set(hp);if(id===curUser.id)curUser.pin=hp;$('epModal').classList.remove('active');tst('PIN actualizado')}};
-$('clEP').onclick=()=>$('epModal').classList.remove('active');$('epModal').onclick=e=>{if(e.target===$('epModal'))$('epModal').classList.remove('active')};
-window.edUName=id=>{const u=users.find(x=>x.id===id);if(!u)return;$('epU').textContent='Cambiar nombre: '+u.name;$('epI').value=u.name;$('epI').type='text';$('epI').maxLength=50;$('epI').removeAttribute('inputmode');$('epModal').querySelector('.modal-title-small').textContent='Cambiar Nombre';$('epModal').classList.add('active');$('epS').onclick=async()=>{const nn=$('epI').value.trim().toUpperCase();if(!nn){tst('Nombre vacío','error');return}await db.ref('users/'+id+'/name').set(nn);const s=await db.ref('reports').orderByChild('odId').equalTo(id).once('value');const up={};s.forEach(c=>{up[c.key+'/operador']=nn});if(Object.keys(up).length)await db.ref('reports').update(up);if(id===curUser.id){curUser.name=nn;$('headerUser').innerHTML=esc(nn)+(curUser.role==='admin'?'<span class="header-badge">ADMIN</span>':'');$('profN').textContent=nn}$('epModal').classList.remove('active');$('epI').type='text';$('epI').maxLength=4;$('epI').setAttribute('inputmode','numeric');$('epModal').querySelector('.modal-title-small').textContent='Cambiar PIN';tst('Nombre actualizado')}};
-window.delU=async id=>{const u=users.find(x=>x.id===id);if(!u)return;if(id===curUser.id){tst('No puedes eliminarte','error');return}if(!confirm('¿Eliminar a '+u.name+'?'))return;await db.ref('users/'+id).remove();tst('Eliminado')};
 
 // CIERRE
 function getCierreReports(){
@@ -899,7 +952,17 @@ function renderDashboard(){
 $('dashFrom').onchange=renderDashboard;
 $('dashTo').onchange=renderDashboard;
 
-fbInit();
+let fbInited=false;
+firebase.auth().onAuthStateChanged(async user=>{
+    if(!user){curUser=null;hide('mainApp');hide('forceChangePinScreen');show('loginScreen');return}
+    const snap=await db.ref('users/'+user.uid).once('value');
+    const data=snap.val();
+    if(!data){await firebase.auth().signOut();return}
+    curUser={id:user.uid,...data};
+    if(!fbInited){fbInited=true;fbInit()}
+    if(data.mustChangePin){forceChangePinFlow();return}
+    enterApp();
+});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
 </script>
 </body>

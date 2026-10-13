@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Migración a Firebase Auth</title>
+<style>
+body{font-family:-apple-system,"Segoe UI",Roboto,sans-serif;background:#070e1a;color:#e8ecf2;max-width:720px;margin:0 auto;padding:1.5rem}
+.warn{background:rgba(231,76,60,.15);border:2px solid #e74c3c;color:#ff6b5b;padding:1rem;border-radius:.5rem;font-weight:700;font-size:1.1rem;margin-bottom:1.5rem}
+label{display:block;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:#8a9bb5;margin:1rem 0 .4rem}
+input{width:100%;box-sizing:border-box;padding:.75rem;background:#0c1829;color:#e8ecf2;border:1.5px solid #1a3050;border-radius:.5rem;font-size:1rem}
+button{width:100%;margin-top:1.25rem;padding:1rem;border:0;border-radius:.5rem;background:#e8ecf2;color:#070e1a;font-weight:700;font-size:1rem;cursor:pointer}
+button:hover{background:#c5cdd8}
+button:disabled{background:#1a3050;color:#5a6f8a;cursor:not-allowed}
+#log{margin-top:1.25rem;height:380px;overflow-y:auto;background:#0a1628;border:1px solid #1a3050;border-radius:.5rem;padding:.75rem;font:.8125rem/1.5 Consolas,monospace;white-space:pre-wrap}
+.ok{color:#2ecc71}.warn-l{color:#f1c40f}.err{color:#e74c3c}
+</style>
+</head>
+<body>
+<div class="warn">⚠️ Ejecutar UNA SOLA VEZ. Después aplicar firebase-rules.json y usar index.html.</div>
+<label>apiKey</label><input id="apiKey" value="FIREBASE_API_KEY_HERE">
+<label>authDomain</label><input id="authDomain" value="FIREBASE_AUTH_DOMAIN_HERE">
+<button id="go">MIGRAR</button>
+<div id="log"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+const DB_URL = 'https://traia-capital-default-rtdb.firebaseio.com';
+const PASS = '0000TRIA';
+const slug = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+const $ = id => document.getElementById(id);
+const log = (msg, cls) => {
+  const d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = msg;
+  $('log').appendChild(d);
+  $('log').scrollTop = $('log').scrollHeight;
+};
+
+$('go').onclick = async () => {
+  const apiKey = $('apiKey').value.trim(), authDomain = $('authDomain').value.trim();
+  if (!apiKey || !authDomain || apiKey.includes('_HERE') || authDomain.includes('_HERE')) {
+    return log('Completa apiKey y authDomain.', 'err');
+  }
+  $('go').disabled = true;
+  const cfg = { apiKey, authDomain, databaseURL: DB_URL };
+  let c = { ok: 0, skip: 0, err: 0 };
+  try {
+    const db = firebase.initializeApp(cfg).database();
+    // Secondary app: createUser signs in on its own auth, not the primary one.
+    const auth = firebase.initializeApp(cfg, 'migration').auth();
+
+    const users = (await db.ref('users').once('value')).val();
+    if (!users || !Object.keys(users).length) return log('No users to migrate', 'warn-l');
+
+    const map = new Map();
+    const taken = new Set();
+    for (const [oldId, u] of Object.entries(users)) {
+      try {
+        if (!u || !u.name || !slug(u.name)) throw new Error('usuario sin nombre válido');
+        const email = slug(u.name) + '@tria.local';
+        let uid, existed = false;
+        try {
+          uid = (await auth.createUserWithEmailAndPassword(email, PASS)).user.uid;
+        } catch (e) {
+          if (e.code !== 'auth/email-already-in-use') throw e;
+          existed = true;
+          log(`${u.name}: ${email} ya existe, recuperando uid`, 'warn-l');
+          uid = (await auth.signInWithEmailAndPassword(email, PASS)).user.uid;
+        }
+        await auth.signOut();
+        // Two users slugging to the same email would overwrite each other's node.
+        if (taken.has(uid)) throw new Error(`${email} duplicado (otro usuario ya usa ese email)`);
+        taken.add(uid);
+        map.set(oldId, uid);
+        await db.ref('users/' + uid).set({ name: u.name, role: u.role ?? null, mustChangePin: true });
+        existed ? c.skip++ : c.ok++;
+        log(`${u.name} (${oldId}) -> ${uid}`, 'ok');
+      } catch (e) {
+        c.err++;
+        log(`${u && u.name || oldId}: ${e.code || e.message}`, 'err');
+      }
+    }
+
+    const updates = {};
+    for (const node of ['reports', 'alerts']) {
+      const data = (await db.ref(node).once('value')).val() || {};
+      for (const [k, v] of Object.entries(data)) {
+        if (v && map.has(v.odId)) updates[`${node}/${k}/odId`] = map.get(v.odId);
+      }
+    }
+    await db.ref().update(updates);
+    log(`odId remapeados: ${Object.keys(updates).length}`, 'ok');
+
+    // Only delete old ids we actually migrated; failed users keep their old node (no data loss).
+    const cleanup = {};
+    for (const [oldId, uid] of map) if (oldId !== uid) cleanup['users/' + oldId] = null;
+    await db.ref().update(cleanup);
+    log(`Usuarios viejos eliminados: ${Object.keys(cleanup).length}`, 'ok');
+
+    await auth.signOut();
+    log(`Totales: ${c.ok} creados, ${c.skip} ya existían, ${c.err} errores`, c.err ? 'warn-l' : 'ok');
+    log('Migración completa. Ahora: 1) aplica firebase-rules.json en Console. 2) despliega el nuevo index.html. 3) comunica a los usuarios: PIN temporal = 0000.', 'ok');
+  } catch (e) {
+    log('ERROR FATAL: ' + (e.code || e.message), 'err');
+  }
+  $('go').disabled = false;
+};
+</script>
+</body>
+</html>
